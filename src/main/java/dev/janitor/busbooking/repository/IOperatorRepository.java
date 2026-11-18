@@ -15,4 +15,7 @@ public interface IOperatorRepository {
 	Operator create(Operator operator);
 	
 	Operator update(Operator operator);
+	
+	// any ACTIVE or MAINTENANCE vehicle (still ours, even if off the road): blocks going INACTIVE
+	boolean ownsInServiceVehicles(long operatorId);
 }

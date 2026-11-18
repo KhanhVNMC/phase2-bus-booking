@@ -15,4 +15,10 @@ public interface IRouteRepository {
 	Route create(Route route);
 	
 	Route update(Route route);
+	
+	// any trip at all, past ones too: freezes origin/destination
+	boolean hasAnyTrips(long routeId);
+	
+	// any SCHEDULED or IN_PROGRESS trip: blocks going INACTIVE
+	boolean hasActiveTrips(long routeId);
 }

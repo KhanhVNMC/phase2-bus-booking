@@ -23,8 +23,9 @@ public interface IBookingRepository {
 	boolean confirm(long bookingId, long holdCutoff, long bookedAt);
 	
 	// fromStatus -> toStatus (ABANDONED_PAYMENT | CANCELLED) and gives the seats back, all or nothing
+	// CONFIRMED -> CANCELLED also queues a full refund with refundId (ignored otherwise)
 	// false = the booking was not in fromStatus anymore (someone else got there first)
-	boolean release(long bookingId, BookingStatus fromStatus, BookingStatus toStatus, long invalidatedAt);
+	boolean release(long bookingId, BookingStatus fromStatus, BookingStatus toStatus, long invalidatedAt, long refundId);
 	
 	// PAYMENT_HOLDING with paymentStartTime < cutoff, oldest -> newest
 	List<Booking> findExpiredHolds(long cutoff, int limit);

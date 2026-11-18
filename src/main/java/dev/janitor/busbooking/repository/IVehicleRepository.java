@@ -16,5 +16,9 @@ public interface IVehicleRepository {
 	
 	Vehicle create(Vehicle vehicle);
 	
+	// only operator and status are written, everything else is immutable
 	Vehicle update(Vehicle vehicle);
+	
+	// any SCHEDULED or IN_PROGRESS trip on it: blocks an operator change and leaving ACTIVE
+	boolean isOnDuty(long vehicleId);
 }

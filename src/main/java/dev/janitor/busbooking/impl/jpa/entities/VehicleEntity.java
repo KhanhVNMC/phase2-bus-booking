@@ -1,21 +1,16 @@
 package dev.janitor.busbooking.impl.jpa.entities;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import dev.janitor.busbooking.consts.VehicleStatus;
 import dev.janitor.busbooking.contracts.DatabaseEntityObject;
 import dev.janitor.busbooking.model.Vehicle;
-import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
-import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Index;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.OrderColumn;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -36,23 +31,22 @@ public class VehicleEntity implements DatabaseEntityObject {
 	@Column(name = "operator_id", nullable = false)
 	private long operatorId;
 	
+	@Setter(AccessLevel.NONE)
 	@Column(name = "license_plate", nullable = false, unique = true)
 	private String licensePlate;
 	
+	@Setter(AccessLevel.NONE)
 	@Column(name = "vehicle_type", nullable = false)
 	private String vehicleType;
 	
+	@Setter(AccessLevel.NONE)
 	@Column(name = "seat_capacity", nullable = false)
 	private int seatCapacity;
 	
-	// order = bit index, so the order column is load bearing
-	@ElementCollection
-	@CollectionTable(name = "vehicle_seat_labels", joinColumns = @JoinColumn(
-		name = "vehicle_id"
-	))
-	@OrderColumn(name = "seat_index")
-	@Column(name = "seat_label", nullable = false)
-	private List<String> seatLabels;
+	// order = bit index once copied into a trip. empty = no layout, open seating only
+	@Setter(AccessLevel.NONE)
+	@Column(name = "seat_labels", nullable = false)
+	private String[] seatLabels;
 	
 	@Enumerated(EnumType.STRING)
 	@Column(name = "status", nullable = false)
@@ -69,7 +63,11 @@ public class VehicleEntity implements DatabaseEntityObject {
 		entity.licensePlate = model.licensePlate();
 		entity.vehicleType = model.vehicleType();
 		entity.seatCapacity = model.seatCapacity();
-		entity.seatLabels = model.seatLabels() == null ? new ArrayList<>() : new ArrayList<>(model.seatLabels());
+		if (model.seatLabels() == null) {
+			entity.seatLabels = new String[0];
+		} else {
+			entity.seatLabels = model.seatLabels().toArray(new String[0]);
+		}
 		entity.status = model.status();
 		entity.createdAt = model.createdAt();
 		return entity;
@@ -78,7 +76,7 @@ public class VehicleEntity implements DatabaseEntityObject {
 	public Vehicle toModel() {
 		return new Vehicle(
 			id, operatorId, licensePlate, vehicleType,
-			seatCapacity, List.copyOf(seatLabels), status, createdAt
+			seatCapacity, List.of(seatLabels), status, createdAt
 		);
 	}
 }

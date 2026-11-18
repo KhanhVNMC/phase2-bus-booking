@@ -1,5 +1,6 @@
 package dev.janitor.busbooking.impl.jpa.repos;
 
+import dev.janitor.busbooking.consts.VehicleStatus;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -69,5 +70,20 @@ public class JPAOperatorRepository implements IOperatorRepository {
 			existing.setStatus(operator.status());
 			return existing.toModel();
 		});
+	}
+	
+	@Override
+	public boolean ownsInServiceVehicles(long operatorId) {
+		try (var man = runtime.openEntityManager()) {
+			var query = man.createQuery("""
+				SELECT count(v) FROM VehicleEntity v
+				WHERE v.operatorId = :operator_id AND v.status IN (:active, :maintenance)
+			""", Long.class);
+			query.setParameter("operator_id", operatorId);
+			query.setParameter("active", VehicleStatus.ACTIVE);
+			query.setParameter("maintenance", VehicleStatus.MAINTENANCE);
+			long inServiceVehicles = query.getSingleResult();
+			return inServiceVehicles > 0;
+		}
 	}
 }

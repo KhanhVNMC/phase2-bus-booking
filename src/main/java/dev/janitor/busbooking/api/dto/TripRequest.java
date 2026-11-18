@@ -14,5 +14,6 @@ public record TripRequest(
 	// ours, not in the phase 1 contract
 	SeatsType seatsType,
 	Integer totalSeats, // OPEN_SEATING only
-	List<String> maskedSeatNames // ASSIGNED_SEATING only: vehicle seats not for sale
+	List<String> maskedSeatNames, // ASSIGNED_SEATING only: vehicle seats not for sale
+	Integer bookingCutoffMinutes // null = default (15), min 10, create only
 ) {}

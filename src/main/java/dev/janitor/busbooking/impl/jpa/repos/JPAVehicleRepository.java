@@ -1,5 +1,6 @@
 package dev.janitor.busbooking.impl.jpa.repos;
 
+import dev.janitor.busbooking.consts.TripStatus;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -80,18 +81,25 @@ public class JPAVehicleRepository implements IVehicleRepository {
 			if (existing == null) {
 				return null;
 			}
+			// plate, type, capacity and the seat map are immutable, only these two move
 			existing.setOperatorId(vehicle.operatorId());
-			existing.setLicensePlate(vehicle.licensePlate());
-			existing.setVehicleType(vehicle.vehicleType());
-			existing.setSeatCapacity(vehicle.seatCapacity());
-			// trips own a frozen copy, so editing the layout never moves anyone's seat
-			if (vehicle.seatLabels() == null) {
-				existing.setSeatLabels(new ArrayList<>());
-			} else {
-				existing.setSeatLabels(new ArrayList<>(vehicle.seatLabels()));
-			}
 			existing.setStatus(vehicle.status());
 			return existing.toModel();
 		});
+	}
+	
+	@Override
+	public boolean isOnDuty(long vehicleId) {
+		try (var man = runtime.openEntityManager()) {
+			var query = man.createQuery("""
+				SELECT count(t) FROM TripEntity t
+				WHERE t.vehicleId = :vehicle_id AND t.status IN (:scheduled, :in_progress)
+			""", Long.class);
+			query.setParameter("vehicle_id", vehicleId);
+			query.setParameter("scheduled", TripStatus.SCHEDULED);
+			query.setParameter("in_progress", TripStatus.IN_PROGRESS);
+			long activeTrips = query.getSingleResult();
+			return activeTrips > 0;
+		}
 	}
 }

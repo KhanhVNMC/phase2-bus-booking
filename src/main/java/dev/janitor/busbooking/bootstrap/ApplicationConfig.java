@@ -60,6 +60,11 @@ public class ApplicationConfig {
 
 	// SEATS
 	private int minSellableSeats = envInt("MIN_SELLABLE_SEATS", 1);
+	private int maxSeatsPerBooking = envInt("MAX_SEATS_PER_BOOKING", 6); // worst case: family of 6
+
+	// BOOKING CUTOFF (per trip, frozen at creation)
+	private int defaultBookingCutoffMinutes = envInt("DEFAULT_BOOKING_CUTOFF_MINUTES", 15);
+	private int minBookingCutoffMinutes = envInt("MIN_BOOKING_CUTOFF_MINUTES", 10);
 
 	// BOOKING HOLDS
 	private int paymentHoldTtlSeconds = envInt("PAYMENT_HOLD_TTL_SECONDS", 10 * 60);
@@ -89,6 +94,14 @@ public class ApplicationConfig {
 	private int paymentDeclinePercent = envInt("PAYMENT_DECLINE_PERCENT", 7);
 	private int paymentTimeoutPercent = envInt("PAYMENT_TIMEOUT_PERCENT", 3);
 	private int paymentTimeoutMillis = envInt("PAYMENT_TIMEOUT_MILLIS", 5_000);
+
+	// FAKE BANK REFUNDS (one at a time, retried with backoff, FAILED for a human after max attempts)
+	private int refundIssueIntervalMillis = envInt("REFUND_ISSUE_INTERVAL_MILLIS", 2_000);
+	private int refundMinDelayMillis = envInt("REFUND_MIN_DELAY_MILLIS", 1_000);
+	private int refundMaxDelayMillis = envInt("REFUND_MAX_DELAY_MILLIS", 3_000);
+	private int refundFailurePercent = envInt("REFUND_FAILURE_PERCENT", 5);
+	private int refundMaxAttempts = envInt("REFUND_MAX_ATTEMPTS", 5);
+	private int refundFirstRetrySeconds = envInt("REFUND_FIRST_RETRY_SECONDS", 30); // x4 every attempt
 
 	private static String env(String name, String fallback) {
 		String value = verboseGetEnv(name);

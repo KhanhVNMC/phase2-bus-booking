@@ -11,7 +11,7 @@ public record Vehicle(
 	String licensePlate,
 	String vehicleType,
 	int seatCapacity, // == seatLabels.size() when a layout exists
-	List<String> seatLabels, // optional layout; empty means pit only, no named seats
+	List<String> seatLabels, // optional layout; empty means open seating only
 	VehicleStatus status,
 	long createdAt
 ) {

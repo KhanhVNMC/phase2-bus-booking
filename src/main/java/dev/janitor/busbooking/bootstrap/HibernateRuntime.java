@@ -11,6 +11,7 @@ import com.zaxxer.hikari.HikariDataSource;
 import dev.janitor.busbooking.impl.jpa.entities.BookingEntity;
 import dev.janitor.busbooking.impl.jpa.entities.LocationEntity;
 import dev.janitor.busbooking.impl.jpa.entities.OperatorEntity;
+import dev.janitor.busbooking.impl.jpa.entities.RefundEntity;
 import dev.janitor.busbooking.impl.jpa.entities.RouteEntity;
 import dev.janitor.busbooking.impl.jpa.entities.TripEntity;
 import dev.janitor.busbooking.impl.jpa.entities.UserEntity;
@@ -35,6 +36,7 @@ public final class HibernateRuntime implements AutoCloseable {
 		RouteEntity.class,
 		TripEntity.class,
 		BookingEntity.class,
+		RefundEntity.class,
 		UserEntity.class
 	};
 
@@ -73,6 +75,7 @@ public final class HibernateRuntime implements AutoCloseable {
 				)
 			.createEntityManagerFactory();
 			ensurePostgresExtensions(entityManagerFactory, config.isDatabaseInstallExtensions());
+			ensurePartialIndexes(entityManagerFactory);
 		} catch (RuntimeException exception) {
 			if (entityManagerFactory != null) {
 				entityManagerFactory.close();
@@ -103,6 +106,28 @@ public final class HibernateRuntime implements AutoCloseable {
 			try {
 				transaction.begin();
 				entityManager.createNativeQuery("CREATE EXTENSION IF NOT EXISTS unaccent").executeUpdate();
+				transaction.commit();
+			} catch (RuntimeException exception) {
+				if (transaction.isActive()) {
+					transaction.rollback();
+				}
+				throw exception;
+			}
+		}
+	}
+
+	// hibernate annotations cannot declare a partial index, so these are made by hand
+	private static void ensurePartialIndexes(EntityManagerFactory entityManagerFactory) {
+		try (EntityManager entityManager = entityManagerFactory.createEntityManager()) {
+			EntityTransaction transaction = entityManager.getTransaction();
+			try {
+				transaction.begin();
+				// one PAYMENT_HOLDING booking per user: a second concurrent hold fails its insert,
+				// which rolls its seat claim back with it
+				entityManager.createNativeQuery("""
+					CREATE UNIQUE INDEX IF NOT EXISTS uq_bookings_one_hold_per_user
+					ON bookings (user_id) WHERE status = 'PAYMENT_HOLDING'
+				""").executeUpdate();
 				transaction.commit();
 			} catch (RuntimeException exception) {
 				if (transaction.isActive()) {

@@ -16,6 +16,7 @@ public record Trip(
 	SeatsType seatsType,
 	TripStatus status,
 	long createdAt,
+	int bookingCutoffMinutes, // no booking/cancel after departure - this, frozen at creation
 	
 	int totalSeats, // kept in sync even with assigned seats (== assignedSeatNames.size())
 	List<String> assignedSeatNames, // vehicle layout minus the masked seats, frozen at creation; blind if OPEN_SEATING

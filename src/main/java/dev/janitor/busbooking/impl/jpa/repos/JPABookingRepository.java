@@ -6,9 +6,12 @@ import java.util.Optional;
 
 import dev.janitor.busbooking.bootstrap.HibernateRuntime;
 import dev.janitor.busbooking.consts.BookingStatus;
+import dev.janitor.busbooking.consts.RefundStatus;
 import dev.janitor.busbooking.consts.SeatsType;
 import dev.janitor.busbooking.impl.jpa.entities.BookingEntity;
+import dev.janitor.busbooking.impl.jpa.entities.RefundEntity;
 import dev.janitor.busbooking.model.Booking;
+import dev.janitor.busbooking.model.Refund;
 import dev.janitor.busbooking.repository.IBookingRepository;
 
 public class JPABookingRepository implements IBookingRepository {
@@ -121,7 +124,7 @@ public class JPABookingRepository implements IBookingRepository {
 	
 	// either the user cancelled their ticket/booking or they abandoned it mid way (skemmer)
 	@Override
-	public boolean release(long bookingId, BookingStatus fromStatus, BookingStatus toStatus, long invalidatedAt) {
+	public boolean release(long bookingId, BookingStatus fromStatus, BookingStatus toStatus, long invalidatedAt, long refundId) {
 		boolean abandoningHold = fromStatus == BookingStatus.PAYMENT_HOLDING && toStatus == BookingStatus.ABANDONED_PAYMENT;
 		boolean cancellingPaid = fromStatus == BookingStatus.CONFIRMED && toStatus == BookingStatus.CANCELLED;
 		if (!abandoningHold && !cancellingPaid) {
@@ -181,6 +184,14 @@ public class JPABookingRepository implements IBookingRepository {
 			if (!seatsReleased) {
 				// the booking held seats the trip does not have
 				throw new IllegalStateException("Booked seats out of sync for booking " + bookingId);
+			}
+			if (cancellingPaid) {
+				// same transaction as the flip: a paid cancel without its refund can never be committed
+				var refund = new Refund(
+					refundId, bookingId, booking.totalAmount(), RefundStatus.PENDING,
+					0, invalidatedAt, invalidatedAt, 0
+				);
+				man.persist(RefundEntity.fromModel(refund));
 			}
 			return true;
 		});

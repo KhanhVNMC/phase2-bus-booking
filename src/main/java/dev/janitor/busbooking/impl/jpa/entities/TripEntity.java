@@ -1,6 +1,5 @@
 package dev.janitor.busbooking.impl.jpa.entities;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import org.hibernate.annotations.DynamicUpdate;
@@ -10,16 +9,12 @@ import dev.janitor.busbooking.consts.TripStatus;
 import dev.janitor.busbooking.contracts.DatabaseEntityObject;
 import dev.janitor.busbooking.model.SeatSet;
 import dev.janitor.busbooking.model.Trip;
-import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
-import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Index;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.OrderColumn;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -68,18 +63,17 @@ public class TripEntity implements DatabaseEntityObject {
 	@Column(name = "created_at", nullable = false)
 	private long createdAt;
 	
+	@Setter(AccessLevel.NONE)
+	@Column(name = "booking_cutoff_minutes", nullable = false)
+	private int bookingCutoffMinutes;
+	
 	@Column(name = "total_seats", nullable = false)
 	private int totalSeats;
 	
-	// frozen at creation, order = bit index
+	// order = bit index (postgres arrays keep their order). replaced only by a vehicle swap
 	@Setter(AccessLevel.NONE)
-	@ElementCollection
-	@CollectionTable(name = "trip_assigned_seat_names", joinColumns = @JoinColumn(
-		name = "trip_id"
-	))
-	@OrderColumn(name = "seat_index")
-	@Column(name = "seat_name", nullable = false)
-	private List<String> assignedSeatNames;
+	@Column(name = "assigned_seat_names", nullable = false)
+	private String[] assignedSeatNames;
 	
 	// booked state, only ever changed by the atomic updates in the booking repo
 	@Setter(AccessLevel.NONE)
@@ -105,11 +99,12 @@ public class TripEntity implements DatabaseEntityObject {
 		entity.seatsType = model.seatsType();
 		entity.status = model.status();
 		entity.createdAt = model.createdAt();
+		entity.bookingCutoffMinutes = model.bookingCutoffMinutes();
 		entity.totalSeats = model.totalSeats();
 		if (model.assignedSeatNames() == null) {
-			entity.assignedSeatNames = new ArrayList<>();
+			entity.assignedSeatNames = new String[0];
 		} else {
-			entity.assignedSeatNames = new ArrayList<>(model.assignedSeatNames());
+			entity.assignedSeatNames = model.assignedSeatNames().toArray(new String[0]);
 		}
 		entity.openSeatingBooked = model.openSeatingBooked();
 		entity.assignedSeatingBookedLo = model.assignedSeatingBooked().lo();
@@ -120,8 +115,8 @@ public class TripEntity implements DatabaseEntityObject {
 	public Trip toModel() {
 		return new Trip(
 			id, routeId, vehicleId, departureTime, arrivalTime, price,
-			seatsType, status, createdAt,
-			totalSeats, List.copyOf(assignedSeatNames),
+			seatsType, status, createdAt, bookingCutoffMinutes,
+			totalSeats, List.of(assignedSeatNames),
 			openSeatingBooked, new SeatSet(assignedSeatingBookedLo, assignedSeatingBookedHi)
 		);
 	}
