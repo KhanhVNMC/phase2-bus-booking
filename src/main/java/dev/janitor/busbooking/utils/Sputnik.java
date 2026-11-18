@@ -7,11 +7,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.Getter;
 
-/**
- * (C) 2026 gkvndev, All rights reserved.
- * Originally from Patchouli Engine (dev.gkvn.patchouli), the author's personal project.
- * Do not use, copy or redistribute outside of this project without permission.
- */
 public class Sputnik {
 	@Getter
 	private static final ObjectMapper objectMapper = new ObjectMapper();
@@ -25,6 +20,14 @@ public class Sputnik {
 			.replace('đ', 'd')
 			.replace('Đ', 'D')
 		;
+	}
+	
+	public static String containing(String searchText) {
+		String escapedText = Sputnik.toLower(Sputnik.unaccent(searchText.trim()));
+		escapedText = escapedText.replace("!", "!!");
+		escapedText = escapedText.replace("%", "!%");
+		escapedText = escapedText.replace("_", "!_");
+		return "%" + escapedText + "%";
 	}
 
 	public static String toLower(String s) {

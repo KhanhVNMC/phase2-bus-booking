@@ -9,12 +9,12 @@ public record Booking(
 	long tripId,
 	String passengerName,
 	String passengerPhone,
-	// pit mode: popcount is the seat count, bits mean nothing. named mode: bit i -> trip.sellableSeatLabels[i]
-	SeatSet desiredSeats,
 	long unitPrice, // copied from trip.price
-	long totalAmount, // unitPrice * desiredSeats.popcount()
+	SeatSet desiredAssignedSeats, // ASSIGNED_SEATING: bit i -> trip.assignedSeatNames[i]. blind otherwise
+	int desiredOpenSeatsCount, // OPEN_SEATING. blind otherwise
+	long totalAmount, // unitPrice * (OPEN_SEATING ? desiredOpenSeatsCount : desiredAssignedSeats.popcount())
 	BookingStatus status,
 	long paymentStartTime, // the hold gc sweeps on this
-	long bookedAt, // CONFIRMED only, 0 otherwise
-	long invalidatedAt // ABANDONED_PAYMENT / CANCELLED only, 0 otherwise
+	long bookedAt, // CONFIRMED only
+	long invalidatedAt // ABANDONED_PAYMENT / CANCELLED only
 ) {}

@@ -3,7 +3,9 @@ package dev.janitor.busbooking.impl.jpa.entities;
 import java.util.ArrayList;
 import java.util.List;
 
-import dev.janitor.busbooking.consts.SeatingMode;
+import org.hibernate.annotations.DynamicUpdate;
+
+import dev.janitor.busbooking.consts.SeatsType;
 import dev.janitor.busbooking.consts.TripStatus;
 import dev.janitor.busbooking.contracts.DatabaseEntityObject;
 import dev.janitor.busbooking.model.SeatSet;
@@ -24,6 +26,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+// dynamic update: a dirty-checked save must never rewrite the booked counters it loaded
+@DynamicUpdate
 @Entity
 @Table(name = "trips", indexes = {
 	@Index(name = "idx_trips_route_departure", columnList = "route_id, departure_time"),
@@ -53,21 +57,8 @@ public class TripEntity implements DatabaseEntityObject {
 	
 	@Setter(AccessLevel.NONE)
 	@Enumerated(EnumType.STRING)
-	@Column(name = "seating_mode", nullable = false)
-	private SeatingMode seatingMode;
-	
-	@Column(name = "sellable_seat_count", nullable = false)
-	private int sellableSeatCount;
-	
-	// frozen at creation, order = bit index
-	@Setter(AccessLevel.NONE)
-	@ElementCollection
-	@CollectionTable(name = "trip_sellable_seat_labels", joinColumns = @JoinColumn(
-		name = "trip_id"
-	))
-	@OrderColumn(name = "seat_index")
-	@Column(name = "seat_label", nullable = false)
-	private List<String> sellableSeatLabels;
+	@Column(name = "seats_type", nullable = false)
+	private SeatsType seatsType;
 	
 	@Enumerated(EnumType.STRING)
 	@Column(name = "status", nullable = false)
@@ -77,12 +68,31 @@ public class TripEntity implements DatabaseEntityObject {
 	@Column(name = "created_at", nullable = false)
 	private long createdAt;
 	
-	// the seat bitset, only ever changed by the atomic update in the repo
-	@Column(name = "booked_seats_lo", nullable = false)
-	private long bookedSeatsLo;
+	@Column(name = "total_seats", nullable = false)
+	private int totalSeats;
 	
-	@Column(name = "booked_seats_hi", nullable = false)
-	private long bookedSeatsHi;
+	// frozen at creation, order = bit index
+	@Setter(AccessLevel.NONE)
+	@ElementCollection
+	@CollectionTable(name = "trip_assigned_seat_names", joinColumns = @JoinColumn(
+		name = "trip_id"
+	))
+	@OrderColumn(name = "seat_index")
+	@Column(name = "seat_name", nullable = false)
+	private List<String> assignedSeatNames;
+	
+	// booked state, only ever changed by the atomic updates in the booking repo
+	@Setter(AccessLevel.NONE)
+	@Column(name = "open_seating_booked", nullable = false)
+	private int openSeatingBooked;
+	
+	@Setter(AccessLevel.NONE)
+	@Column(name = "assigned_seating_booked_lo", nullable = false)
+	private long assignedSeatingBookedLo;
+	
+	@Setter(AccessLevel.NONE)
+	@Column(name = "assigned_seating_booked_hi", nullable = false)
+	private long assignedSeatingBookedHi;
 	
 	public static TripEntity fromModel(Trip model) {
 		var entity = new TripEntity();
@@ -92,22 +102,27 @@ public class TripEntity implements DatabaseEntityObject {
 		entity.departureTime = model.departureTime();
 		entity.arrivalTime = model.arrivalTime();
 		entity.price = model.price();
-		entity.seatingMode = model.seatingMode();
-		entity.sellableSeatCount = model.sellableSeatCount();
-		entity.sellableSeatLabels = model.sellableSeatLabels() == null
-			? new ArrayList<>() : new ArrayList<>(model.sellableSeatLabels());
+		entity.seatsType = model.seatsType();
 		entity.status = model.status();
 		entity.createdAt = model.createdAt();
-		entity.bookedSeatsLo = model.bookedSeats().lo();
-		entity.bookedSeatsHi = model.bookedSeats().hi();
+		entity.totalSeats = model.totalSeats();
+		if (model.assignedSeatNames() == null) {
+			entity.assignedSeatNames = new ArrayList<>();
+		} else {
+			entity.assignedSeatNames = new ArrayList<>(model.assignedSeatNames());
+		}
+		entity.openSeatingBooked = model.openSeatingBooked();
+		entity.assignedSeatingBookedLo = model.assignedSeatingBooked().lo();
+		entity.assignedSeatingBookedHi = model.assignedSeatingBooked().hi();
 		return entity;
 	}
 	
 	public Trip toModel() {
 		return new Trip(
 			id, routeId, vehicleId, departureTime, arrivalTime, price,
-			seatingMode, sellableSeatCount, List.copyOf(sellableSeatLabels),
-			status, createdAt, new SeatSet(bookedSeatsLo, bookedSeatsHi)
+			seatsType, status, createdAt,
+			totalSeats, List.copyOf(assignedSeatNames),
+			openSeatingBooked, new SeatSet(assignedSeatingBookedLo, assignedSeatingBookedHi)
 		);
 	}
 }

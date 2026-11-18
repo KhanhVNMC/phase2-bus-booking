@@ -1,21 +1,10 @@
 package dev.janitor.busbooking.model;
 
-// 128-bit seat bitset, x86 order: seat i = bit i, LSB first. seats 0..63 in lo, 64..127 in hi
+// 128-bit assigned seat bitset, LSB -> MSB; seat i = bit i
+// seats 0..63 in lo, 64..127 in hi
 public record SeatSet(long lo, long hi) {
 	public static final int CAPACITY = 128;
 	public static final SeatSet EMPTY = new SeatSet(0, 0);
-
-	// the lowest n bits set, aka a unary counter of n
-	public static SeatSet firstN(int n) {
-		if (n < 0 || n > CAPACITY) {
-			throw new IllegalArgumentException("Seat count must be between 0 and " + CAPACITY);
-		}
-		if (n == 0) return EMPTY;
-		if (n < 64) return new SeatSet((1L << n) - 1, 0);
-		if (n == 64) return new SeatSet(-1L, 0);
-		if (n < CAPACITY) return new SeatSet(-1L, (1L << (n - 64)) - 1);
-		return new SeatSet(-1L, -1L);
-	}
 
 	public static SeatSet of(int... seats) {
 		long lo = 0, hi = 0;

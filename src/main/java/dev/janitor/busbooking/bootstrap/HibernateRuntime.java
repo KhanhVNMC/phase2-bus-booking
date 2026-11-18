@@ -16,8 +16,6 @@ import dev.janitor.busbooking.impl.jpa.entities.TripEntity;
 import dev.janitor.busbooking.impl.jpa.entities.UserEntity;
 import dev.janitor.busbooking.impl.jpa.entities.VehicleEntity;
 
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.function.Function;
 
 import org.hibernate.cfg.JdbcSettings;
@@ -55,14 +53,12 @@ public final class HibernateRuntime implements AutoCloseable {
 	}
 
 	private final EntityManagerFactory entityManagerFactory;
-	private final ExecutorService queryExecutor;
 	private final HikariDataSource dataSource;
 
 	public HibernateRuntime() {
 		ApplicationConfig config = ApplicationConfig.get();
 		validateConfig(config);
 		this.dataSource = new HikariDataSource(createPoolConfig(config));
-		this.queryExecutor = Executors.newVirtualThreadPerTaskExecutor();
 		EntityManagerFactory entityManagerFactory = null;
 		try {
 			entityManagerFactory = new HibernatePersistenceConfiguration(config.getDatabaseName())
@@ -81,14 +77,13 @@ public final class HibernateRuntime implements AutoCloseable {
 			if (entityManagerFactory != null) {
 				entityManagerFactory.close();
 			}
-			this.queryExecutor.close();
 			this.dataSource.close();
 			throw exception;
 		}
 		this.entityManagerFactory = entityManagerFactory;
 	}
 
-	// the query Matcher calls unaccent() in SQL
+	// the location/operator/vehicle searches call unaccent() in SQL
 	private static void ensurePostgresExtensions(
 		EntityManagerFactory entityManagerFactory,
 		boolean installExtensions
@@ -170,17 +165,30 @@ public final class HibernateRuntime implements AutoCloseable {
 		}
 	}
 
+	// all or nothing: commits if work returns, rolls back if it throws
+	public <T> T transact(Function<EntityManager, T> work) {
+		try (var entityManager = openEntityManager()) {
+			EntityTransaction transaction = entityManager.getTransaction();
+			transaction.begin();
+			try {
+				T result = work.apply(entityManager);
+				transaction.commit();
+				return result;
+			} catch (RuntimeException exception) {
+				if (transaction.isActive()) {
+					transaction.rollback();
+				}
+				throw exception;
+			}
+		}
+	}
+	
 	public EntityManager openEntityManager() {
 		return entityManagerFactory.createEntityManager();
 	}
 
-	public ExecutorService queryExecutor() {
-		return queryExecutor;
-	}
-
 	@Override
 	public void close() {
-		queryExecutor.close();
 		if (entityManagerFactory.isOpen()) {
 			entityManagerFactory.close();
 		}

@@ -49,16 +49,20 @@ public class BookingEntity implements DatabaseEntityObject {
 	private String passengerPhone;
 	
 	@Setter(AccessLevel.NONE)
-	@Column(name = "desired_seats_lo", nullable = false)
-	private long desiredSeatsLo;
-	
-	@Setter(AccessLevel.NONE)
-	@Column(name = "desired_seats_hi", nullable = false)
-	private long desiredSeatsHi;
-	
-	@Setter(AccessLevel.NONE)
 	@Column(name = "unit_price", nullable = false)
 	private long unitPrice;
+	
+	@Setter(AccessLevel.NONE)
+	@Column(name = "desired_assigned_seats_lo", nullable = false)
+	private long desiredAssignedSeatsLo;
+	
+	@Setter(AccessLevel.NONE)
+	@Column(name = "desired_assigned_seats_hi", nullable = false)
+	private long desiredAssignedSeatsHi;
+	
+	@Setter(AccessLevel.NONE)
+	@Column(name = "desired_open_seats_count", nullable = false)
+	private int desiredOpenSeatsCount;
 	
 	@Setter(AccessLevel.NONE)
 	@Column(name = "total_amount", nullable = false)
@@ -86,9 +90,10 @@ public class BookingEntity implements DatabaseEntityObject {
 		entity.tripId = model.tripId();
 		entity.passengerName = model.passengerName();
 		entity.passengerPhone = model.passengerPhone();
-		entity.desiredSeatsLo = model.desiredSeats().lo();
-		entity.desiredSeatsHi = model.desiredSeats().hi();
 		entity.unitPrice = model.unitPrice();
+		entity.desiredAssignedSeatsLo = model.desiredAssignedSeats().lo();
+		entity.desiredAssignedSeatsHi = model.desiredAssignedSeats().hi();
+		entity.desiredOpenSeatsCount = model.desiredOpenSeatsCount();
 		entity.totalAmount = model.totalAmount();
 		entity.status = model.status();
 		entity.paymentStartTime = model.paymentStartTime();
@@ -100,8 +105,8 @@ public class BookingEntity implements DatabaseEntityObject {
 	public Booking toModel() {
 		return new Booking(
 			id, bookingCode, userId, tripId, passengerName, passengerPhone,
-			new SeatSet(desiredSeatsLo, desiredSeatsHi), unitPrice, totalAmount,
-			status, paymentStartTime, bookedAt, invalidatedAt
+			unitPrice, new SeatSet(desiredAssignedSeatsLo, desiredAssignedSeatsHi), desiredOpenSeatsCount,
+			totalAmount, status, paymentStartTime, bookedAt, invalidatedAt
 		);
 	}
 }
