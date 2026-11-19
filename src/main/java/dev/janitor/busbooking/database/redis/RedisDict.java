@@ -1,7 +1,9 @@
 package dev.janitor.busbooking.database.redis;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -128,6 +130,46 @@ public final class RedisDict<V> {
 		return deserialize(key, client().get(toRedisKey(key)));
 	}
 
+	/**
+	 * Gets many stored values in one round trip (MGET).
+	 *
+	 * @param keys the dictionary keys
+	 * @return the values in the same order as the keys, {@code null} where absent
+	 * @throws IllegalStateException if deserialization fails
+	 */
+	public List<V> getAll(List<String> keys) {
+		List<V> values = new ArrayList<>();
+		if (keys.isEmpty()) {
+			return values;
+		}
+		String[] redisKeys = new String[keys.size()];
+		for (int index = 0; index < keys.size(); index++) {
+			redisKeys[index] = toRedisKey(keys.get(index));
+		}
+		List<String> jsons = client().mget(redisKeys);
+		for (int index = 0; index < keys.size(); index++) {
+			values.add(deserialize(keys.get(index), jsons.get(index)));
+		}
+		return values;
+	}
+	
+	/**
+	 * Removes many keys in one round trip (DEL).
+	 *
+	 * @param keys the dictionary keys
+	 * @return how many keys existed and were removed
+	 */
+	public long removeAll(List<String> keys) {
+		if (keys.isEmpty()) {
+			return 0;
+		}
+		String[] redisKeys = new String[keys.size()];
+		for (int index = 0; index < keys.size(); index++) {
+			redisKeys[index] = toRedisKey(keys.get(index));
+		}
+		return client().del(redisKeys);
+	}
+	
 	/**
 	 * Checks whether a key exists.
 	 *

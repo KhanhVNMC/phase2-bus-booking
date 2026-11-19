@@ -4,6 +4,7 @@ import dev.janitor.busbooking.api.JanitorAPI;
 import dev.janitor.busbooking.bootstrap.ApplicationConfig;
 import dev.janitor.busbooking.bootstrap.HibernateRuntime;
 import dev.janitor.busbooking.bootstrap.RedisRuntime;
+import dev.janitor.busbooking.utils.Snowflake;
 import io.javalin.Javalin;
 
 public class Main {
@@ -19,12 +20,13 @@ public class Main {
 		if (config.getServerPort() < 1 || config.getServerPort() > 65_535) {
 			throw new IllegalArgumentException("SERVER_PORT must be between 1 and 65535");
 		}
-		if (config.getInstanceId() < 0) {
-			throw new IllegalArgumentException("INSTANCE_ID is required");
+		if (config.getInstanceId() < 0 || config.getInstanceId() > Snowflake.MAX_INSTANCE_ID) {
+			throw new IllegalArgumentException("INSTANCE_ID is required, between 0 and " + Snowflake.MAX_INSTANCE_ID);
 		}
 		System.out.println("[system] Javalin server bind port is: " + config.getServerPort());
 
 		System.out.println("[system] Starting services...");
+		Snowflake.configureGlobal(new Snowflake(config.getInstanceId()));
 		HibernateRuntime hibernate = HibernateRuntime.configureGlobal(new HibernateRuntime());
 		RedisRuntime redis = null;
 		try {

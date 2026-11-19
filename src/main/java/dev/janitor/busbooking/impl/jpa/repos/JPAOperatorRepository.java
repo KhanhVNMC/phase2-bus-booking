@@ -86,4 +86,32 @@ public class JPAOperatorRepository implements IOperatorRepository {
 			return inServiceVehicles > 0;
 		}
 	}
+	
+	@Override
+	public boolean existsByName(String name, long excludedOperatorId) {
+		try (var man = runtime.openEntityManager()) {
+			var query = man.createQuery("""
+				SELECT count(o) FROM OperatorEntity o
+				WHERE lower(o.name) = lower(:name) AND o.id <> :excluded_operator_id
+			""", Long.class);
+			query.setParameter("name", name);
+			query.setParameter("excluded_operator_id", excludedOperatorId);
+			long matchingOperators = query.getSingleResult();
+			return matchingOperators > 0;
+		}
+	}
+	
+	@Override
+	public boolean existsByEmail(String email, long excludedOperatorId) {
+		try (var man = runtime.openEntityManager()) {
+			var query = man.createQuery("""
+				SELECT count(o) FROM OperatorEntity o
+				WHERE o.email = :email AND o.id <> :excluded_operator_id
+			""", Long.class);
+			query.setParameter("email", email);
+			query.setParameter("excluded_operator_id", excludedOperatorId);
+			long matchingOperators = query.getSingleResult();
+			return matchingOperators > 0;
+		}
+	}
 }

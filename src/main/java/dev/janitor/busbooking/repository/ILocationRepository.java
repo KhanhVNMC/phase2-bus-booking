@@ -14,4 +14,7 @@ public interface ILocationRepository {
 	Location create(Location location);
 	
 	Location update(Location location);
+	
+	// same name + province + address (case insensitive) on another location. excludedLocationId 0 = none
+	boolean existsByIdentity(String name, String province, String address, long excludedLocationId);
 }

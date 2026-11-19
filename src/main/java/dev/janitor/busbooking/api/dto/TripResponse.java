@@ -7,9 +7,9 @@ import dev.janitor.busbooking.consts.TripStatus;
 
 // the whole thing is what the trip cache stores
 public record TripResponse(
-	long id,
-	long routeId,
-	long vehicleId,
+	String id,
+	String routeId,
+	String vehicleId,
 	RouteDetails route,
 	VehicleDetails vehicle,
 	String origin,

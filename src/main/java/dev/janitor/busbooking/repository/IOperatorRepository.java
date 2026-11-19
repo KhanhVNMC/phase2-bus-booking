@@ -16,6 +16,12 @@ public interface IOperatorRepository {
 	
 	Operator update(Operator operator);
 	
+	// case insensitive, on another operator. excludedOperatorId 0 = none
+	boolean existsByName(String name, long excludedOperatorId);
+	
+	// emails are stored lowercase
+	boolean existsByEmail(String email, long excludedOperatorId);
+	
 	// any ACTIVE or MAINTENANCE vehicle (still ours, even if off the road): blocks going INACTIVE
 	boolean ownsInServiceVehicles(long operatorId);
 }

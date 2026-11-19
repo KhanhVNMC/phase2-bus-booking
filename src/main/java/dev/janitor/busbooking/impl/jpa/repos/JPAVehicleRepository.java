@@ -88,6 +88,7 @@ public class JPAVehicleRepository implements IVehicleRepository {
 		});
 	}
 	
+	// an "on duty" bus is the one that is prepared or currently going on a trip
 	@Override
 	public boolean isOnDuty(long vehicleId) {
 		try (var man = runtime.openEntityManager()) {

@@ -5,9 +5,9 @@ import java.util.List;
 import dev.janitor.busbooking.consts.BookingStatus;
 
 public record BookingResponse(
-	long id,
+	String id,
 	String bookingCode,
-	long tripId,
+	String tripId,
 	String passengerName,
 	String passengerPhone,
 	int quantity, // open count or number of assigned seats

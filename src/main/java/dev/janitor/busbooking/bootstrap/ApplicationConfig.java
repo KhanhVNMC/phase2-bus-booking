@@ -72,6 +72,10 @@ public class ApplicationConfig {
 	private int holdSweepBatchSize = envInt("HOLD_SWEEP_BATCH_SIZE", 500);
 
 	// TRIP CACHE
+	private boolean tripCacheEnabled = envBoolean("TRIP_CACHE_ENABLED", true); // false = straight to the db (benchmark baseline)
+	private int tripCacheLeaseTtlMillis = envInt("TRIP_CACHE_LEASE_TTL_MILLIS", 2_000); // a dead rebuilder frees its trips after this
+	private int tripCacheWaitTimeoutMillis = envInt("TRIP_CACHE_WAIT_TIMEOUT_MILLIS", 2_000); // then 503
+	private int tripCacheWaitPollMillis = envInt("TRIP_CACHE_WAIT_POLL_MILLIS", 50);
 	private int tripCacheTtlSeconds = envInt("TRIP_CACHE_TTL_SECONDS", 60); // backstop only
 	private int tripCacheFlushWindowMillis = envInt("TRIP_CACHE_FLUSH_WINDOW_MILLIS", 500);
 	private int tripCacheFlushBatchSize = envInt("TRIP_CACHE_FLUSH_BATCH_SIZE", 1_000);

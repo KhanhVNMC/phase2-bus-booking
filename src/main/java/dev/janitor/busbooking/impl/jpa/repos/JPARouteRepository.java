@@ -95,4 +95,19 @@ public class JPARouteRepository implements IRouteRepository {
 			return activeTrips > 0;
 		}
 	}
+	
+	@Override
+	public boolean existsByEndpoints(long originId, long destinationId, long excludedRouteId) {
+		try (var man = runtime.openEntityManager()) {
+			var query = man.createQuery("""
+				SELECT count(r) FROM RouteEntity r
+				WHERE r.originId = :origin_id AND r.destinationId = :destination_id AND r.id <> :excluded_route_id
+			""", Long.class);
+			query.setParameter("origin_id", originId);
+			query.setParameter("destination_id", destinationId);
+			query.setParameter("excluded_route_id", excludedRouteId);
+			long matchingRoutes = query.getSingleResult();
+			return matchingRoutes > 0;
+		}
+	}
 }

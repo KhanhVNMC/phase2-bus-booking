@@ -70,4 +70,23 @@ public class JPALocationRepository implements ILocationRepository {
 			return existing.toModel();
 		});
 	}
+	
+	@Override
+	public boolean existsByIdentity(String name, String province, String address, long excludedLocationId) {
+		try (var man = runtime.openEntityManager()) {
+			var query = man.createQuery("""
+				SELECT count(l) FROM LocationEntity l
+				WHERE lower(l.name) = lower(:name)
+				  AND lower(l.province) = lower(:province)
+				  AND lower(l.address) = lower(:address)
+				  AND l.id <> :excluded_location_id
+			""", Long.class);
+			query.setParameter("name", name);
+			query.setParameter("province", province);
+			query.setParameter("address", address);
+			query.setParameter("excluded_location_id", excludedLocationId);
+			long matchingLocations = query.getSingleResult();
+			return matchingLocations > 0;
+		}
+	}
 }

@@ -5,7 +5,7 @@ import java.util.List;
 import dev.janitor.busbooking.consts.VehicleStatus;
 
 public record VehicleResponse(
-	long id,
+	String id,
 	OperatorDetails operator,
 	String licensePlate,
 	String vehicleType,

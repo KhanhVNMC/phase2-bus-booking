@@ -5,7 +5,7 @@ import java.util.List;
 import dev.janitor.busbooking.consts.VehicleStatus;
 
 public record VehicleRequest(
-	Long operatorId,
+	String operatorId,
 	String licensePlate,
 	String vehicleType,
 	Integer seatCapacity,

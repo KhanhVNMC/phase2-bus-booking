@@ -6,8 +6,8 @@ import dev.janitor.busbooking.consts.SeatsType;
 
 // times are vietnam local "yyyy-MM-dd'T'HH:mm:ss"
 public record TripRequest(
-	Long routeId,
-	Long vehicleId,
+	String routeId,
+	String vehicleId,
 	String departureTime,
 	String arrivalTime,
 	Long price, // VND

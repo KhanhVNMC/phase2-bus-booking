@@ -3,7 +3,7 @@ package dev.janitor.busbooking.api.dto;
 import java.util.List;
 
 public record BookingRequest(
-	Long tripId,
+	String tripId,
 	String passengerName,
 	String passengerPhone,
 	Integer quantity, // OPEN_SEATING

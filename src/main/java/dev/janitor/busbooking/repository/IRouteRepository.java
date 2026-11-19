@@ -16,6 +16,9 @@ public interface IRouteRepository {
 	
 	Route update(Route route);
 	
+	// another route with the same origin -> destination. excludedRouteId 0 = none
+	boolean existsByEndpoints(long originId, long destinationId, long excludedRouteId);
+	
 	// any trip at all, past ones too: freezes origin/destination
 	boolean hasAnyTrips(long routeId);
 	

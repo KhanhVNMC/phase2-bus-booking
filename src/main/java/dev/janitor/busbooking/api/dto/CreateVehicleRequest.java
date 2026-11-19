@@ -3,7 +3,7 @@ package dev.janitor.busbooking.api.dto;
 import java.util.List;
 
 public record CreateVehicleRequest(
-	Long operatorId,
+	String operatorId,
 	String licensePlate,
 	String vehicleType,
 	Integer seatCapacity,
