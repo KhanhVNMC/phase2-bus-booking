@@ -43,17 +43,17 @@ public class ApplicationConfig {
 	private boolean databaseInstallExtensions = envBoolean("DATABASE_INSTALL_EXTENSIONS", true);
 	private int databasePoolMinimumIdle = envInt("DATABASE_POOL_MINIMUM_IDLE", 2);
 	private int databasePoolMaximumSize = envInt("DATABASE_POOL_MAXIMUM_SIZE", 16);
-	private int databaseConnectionTimeoutMillis = envInt("DATABASE_CONNECTION_TIMEOUT_MILLIS", 10_000);
-	private int databaseValidationTimeoutMillis = envInt("DATABASE_VALIDATION_TIMEOUT_MILLIS", 5_000);
-	private int databaseIdleTimeoutMillis = envInt("DATABASE_IDLE_TIMEOUT_MILLIS", 10 * 60_000);
-	private int databaseMaxLifetimeMillis = envInt("DATABASE_MAX_LIFETIME_MILLIS", 30 * 60_000);
+	private int databaseConnectionTimeoutMs = envInt("DATABASE_CONNECTION_TIMEOUT_MS", 10_000);
+	private int databaseValidationTimeoutMs = envInt("DATABASE_VALIDATION_TIMEOUT_MS", 5_000);
+	private int databaseIdleTimeoutMs = envInt("DATABASE_IDLE_TIMEOUT_MS", 10 * 60_000);
+	private int databaseMaxLifetimeMs = envInt("DATABASE_MAX_LIFETIME_MS", 30 * 60_000);
 
 	// REDIS
 	private String redisUrl = env("REDIS_URL", "");
 	private String redisHost = env("REDIS_HOST", "localhost");
 	private int redisPort = envInt("REDIS_PORT", 6379);
-	private int redisConnectionTimeoutMillis = envInt("REDIS_CONNECTION_TIMEOUT_MILLIS", 5_000);
-	private int redisSocketTimeoutMillis = envInt("REDIS_SOCKET_TIMEOUT_MILLIS", 5_000);
+	private int redisConnectionTimeoutMs = envInt("REDIS_CONNECTION_TIMEOUT_MS", 5_000);
+	private int redisSocketTimeoutMs = envInt("REDIS_SOCKET_TIMEOUT_MS", 5_000);
 	private int redisPoolMinimumIdle = envInt("REDIS_POOL_MINIMUM_IDLE", 1);
 	private int redisPoolMaximumIdle = envInt("REDIS_POOL_MAXIMUM_IDLE", 8);
 	private int redisPoolMaximumTotal = envInt("REDIS_POOL_MAXIMUM_TOTAL", 16);
@@ -73,12 +73,13 @@ public class ApplicationConfig {
 
 	// TRIP CACHE
 	private boolean tripCacheEnabled = envBoolean("TRIP_CACHE_ENABLED", true); // false = straight to the db (benchmark baseline)
-	private int tripCacheLeaseTtlMillis = envInt("TRIP_CACHE_LEASE_TTL_MILLIS", 2_000); // a dead rebuilder frees its trips after this
-	private int tripCacheWaitTimeoutMillis = envInt("TRIP_CACHE_WAIT_TIMEOUT_MILLIS", 2_000); // then 503
-	private int tripCacheWaitPollMillis = envInt("TRIP_CACHE_WAIT_POLL_MILLIS", 50);
+	private int tripCacheLeaseTtlMs = envInt("TRIP_CACHE_LEASE_TTL_MS", 2_000); // a dead rebuilder frees its trips after this
+	private int tripCacheWaitTimeoutMs = envInt("TRIP_CACHE_WAIT_TIMEOUT_MS", 2_000); // then 503
+	private int tripCacheWaitPollMs = envInt("TRIP_CACHE_WAIT_POLL_MS", 50);
 	private int tripCacheTtlSeconds = envInt("TRIP_CACHE_TTL_SECONDS", 60); // backstop only
-	private int tripCacheFlushWindowMillis = envInt("TRIP_CACHE_FLUSH_WINDOW_MILLIS", 500);
+	private int tripCacheFlushWindowMs = envInt("TRIP_CACHE_FLUSH_WINDOW_MS", 500);
 	private int tripCacheFlushBatchSize = envInt("TRIP_CACHE_FLUSH_BATCH_SIZE", 1_000);
+	private int tripCachePremiumSpinMs = envInt("TRIP_CACHE_PREMIUM_SPIN_MS", 500); // then demoted to an economy ticket
 
 	// EMAIL VERIFICATION
 	private int verificationCodeTtlSeconds = envInt("VERIFICATION_CODE_TTL_SECONDS", 10 * 60);
@@ -93,16 +94,16 @@ public class ApplicationConfig {
 
 	// FAKE PAYMENT
 	private boolean paymentBenchmarkMode = envBoolean("PAYMENT_BENCHMARK_MODE", false); // always succeed, no delay
-	private int paymentMinDelayMillis = envInt("PAYMENT_MIN_DELAY_MILLIS", 200);
-	private int paymentMaxDelayMillis = envInt("PAYMENT_MAX_DELAY_MILLIS", 1_500);
+	private int paymentMinDelayMs = envInt("PAYMENT_MIN_DELAY_MS", 200);
+	private int paymentMaxDelayMs = envInt("PAYMENT_MAX_DELAY_MS", 1_500);
 	private int paymentDeclinePercent = envInt("PAYMENT_DECLINE_PERCENT", 7);
 	private int paymentTimeoutPercent = envInt("PAYMENT_TIMEOUT_PERCENT", 3);
-	private int paymentTimeoutMillis = envInt("PAYMENT_TIMEOUT_MILLIS", 5_000);
+	private int paymentTimeoutMs = envInt("PAYMENT_TIMEOUT_MS", 5_000);
 
 	// FAKE BANK REFUNDS (one at a time, retried with backoff, FAILED for a human after max attempts)
-	private int refundIssueIntervalMillis = envInt("REFUND_ISSUE_INTERVAL_MILLIS", 2_000);
-	private int refundMinDelayMillis = envInt("REFUND_MIN_DELAY_MILLIS", 1_000);
-	private int refundMaxDelayMillis = envInt("REFUND_MAX_DELAY_MILLIS", 3_000);
+	private int refundIssueIntervalMs = envInt("REFUND_ISSUE_INTERVAL_MS", 2_000);
+	private int refundMinDelayMs = envInt("REFUND_MIN_DELAY_MS", 1_000);
+	private int refundMaxDelayMs = envInt("REFUND_MAX_DELAY_MS", 3_000);
 	private int refundFailurePercent = envInt("REFUND_FAILURE_PERCENT", 5);
 	private int refundMaxAttempts = envInt("REFUND_MAX_ATTEMPTS", 5);
 	private int refundFirstRetrySeconds = envInt("REFUND_FIRST_RETRY_SECONDS", 30); // x4 every attempt

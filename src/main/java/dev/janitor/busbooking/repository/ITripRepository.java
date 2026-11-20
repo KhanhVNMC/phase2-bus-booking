@@ -10,9 +10,6 @@ import dev.janitor.busbooking.model.Trip;
 public interface ITripRepository {
 	Optional<Trip> get(long tripId);
 	
-	// public search, ordered by departure. null filters are ignored, the window is [from, to)
-	List<Trip> search(Long originId, Long destinationId, Long departureFrom, Long departureTo);
-	
 	List<Trip> adminSearch(Long routeId, TripStatus status, Long departureFrom, Long departureTo);
 	
 	Trip create(Trip trip);

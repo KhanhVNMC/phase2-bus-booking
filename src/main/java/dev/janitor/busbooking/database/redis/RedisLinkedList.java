@@ -38,7 +38,7 @@ public final class RedisLinkedList<V> {
 	 * @throws IllegalArgumentException if the size is invalid or serialization fails
 	 */
 	public void pushAndTrim(V value, int maxSize) {
-		pushAndTrim(value, maxSize, null);
+		this.pushAndTrim(value, maxSize, null);
 	}
 	
 	/**
@@ -55,12 +55,12 @@ public final class RedisLinkedList<V> {
 		}
 		try {
 			String json = Sputnik.getObjectMapper().writeValueAsString(value);
-			RedisClient client = client();
+			RedisClient client = this.client();
 			client.rpush(key, json);
 			// redis uses neg index, which is arr[len() - |neg|]
 			client.ltrim(key, -maxSize, -1); // use neg index to avoid llen call
 			if (duration != null) {
-				client.pexpire(key, toPositiveMillis(duration));
+				client.pexpire(key, this.toPositiveMs(duration));
 			}
 		} catch (JsonProcessingException e) {
 			throw new IllegalArgumentException("Could not serialize Redis value", e);
@@ -78,10 +78,10 @@ public final class RedisLinkedList<V> {
 	public long push(V value, Duration duration) {
 		try {
 			String json = Sputnik.getObjectMapper().writeValueAsString(value);
-			RedisClient client = client();
+			RedisClient client = this.client();
 			long size = client.rpush(key, json);
 			if (duration != null) {
-				client.pexpire(key, toPositiveMillis(duration));
+				client.pexpire(key, this.toPositiveMs(duration));
 			}
 			return size;
 		} catch (JsonProcessingException e) {
@@ -97,21 +97,21 @@ public final class RedisLinkedList<V> {
 	 * @throws IllegalArgumentException if serialization fails
 	 */
 	public long push(V value) {
-		return push(value, null);
+		return this.push(value, null);
 	}
 
 	/**
 	 * Replaces the complete list without setting an expiration.
 	 */
 	public void replaceAll(List<V> values) {
-		RedisClient client = client();
+		RedisClient client = this.client();
 		client.del(key);
 		if (values.isEmpty()) {
 			return;
 		}
 		String[] serialized = new String[values.size()];
 		try {
-			for (int i = 0; i < values.size(); i++) {
+			for (int i = 0; i < values.size(); ++i) {
 				serialized[i] = Sputnik.getObjectMapper().writeValueAsString(values.get(i));
 			}
 		} catch (JsonProcessingException e) {
@@ -127,10 +127,10 @@ public final class RedisLinkedList<V> {
 	 * @throws IllegalStateException if deserialization fails
 	 */
 	public List<V> getAll() {
-		List<String> rawList = client().lrange(key, 0, -1); // get all
+		List<String> rawList = this.client().lrange(key, 0, -1); // get all
 		List<V> list = new ArrayList<>(rawList.size());
 		for (String json : rawList) {
-			list.add(deserialize(json));
+			list.add(this.deserialize(json));
 		}
 		return list;
 	}
@@ -143,7 +143,7 @@ public final class RedisLinkedList<V> {
 	 * @throws IllegalStateException if deserialization fails
 	 */
 	public V getAt(long index) {
-		return deserialize(client().lindex(key, index));
+		return this.deserialize(this.client().lindex(key, index));
 	}
 	
 	/**
@@ -152,14 +152,14 @@ public final class RedisLinkedList<V> {
 	 * @return the list size
 	 */
 	public long size() {
-		return client().llen(key);
+		return this.client().llen(key);
 	}
 	
 	/**
 	 * Deletes the list.
 	 */
 	public void clear() {
-		client().del(key);
+		this.client().del(key);
 	}
 	
 	/**
@@ -169,14 +169,14 @@ public final class RedisLinkedList<V> {
 	 * @return {@code true} if the expiration was set
 	 */
 	public boolean expire(Duration duration) {
-		return client().pexpire(key, toPositiveMillis(duration)) == 1L;
+		return this.client().pexpire(key, this.toPositiveMs(duration)) == 1L;
 	}
 
 	/**
 	 * Removes the list expiration.
 	 */
 	public boolean persist() {
-		return client().persist(key) == 1L;
+		return this.client().persist(key) == 1L;
 	}
 	
 	/**
@@ -185,7 +185,7 @@ public final class RedisLinkedList<V> {
 	 * @return the remaining seconds, {@code -1} without expiration, or {@code -2} if absent
 	 */
 	public long getTTL() {
-		return client().ttl(key);
+		return this.client().ttl(key);
 	}
 	
 	private RedisClient client() {
@@ -203,7 +203,7 @@ public final class RedisLinkedList<V> {
 		}
 	}
 
-	private long toPositiveMillis(Duration duration) {
+	private long toPositiveMs(Duration duration) {
 		if (duration == null || duration.isNegative() || duration.isZero()) {
 			throw new IllegalArgumentException("Expiration duration must be positive");
 		}

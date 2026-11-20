@@ -66,8 +66,8 @@ public class Sputnik {
 		if (trimmed.length() > maxLength) {
 			throw ServiceException.invalid(fieldName + " must be at most " + maxLength + " characters");
 		}
-		for (int index = 0; index < trimmed.length(); index++) {
-			if (Character.isISOControl(trimmed.charAt(index))) {
+		for (int i = 0; i < trimmed.length(); ++i) {
+			if (Character.isISOControl(trimmed.charAt(i))) {
 				throw ServiceException.invalid(fieldName + " must not contain control characters");
 			}
 		}

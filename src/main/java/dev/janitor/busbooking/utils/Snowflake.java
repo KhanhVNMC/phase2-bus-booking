@@ -1,5 +1,7 @@
 package dev.janitor.busbooking.utils;
 
+import java.util.function.LongSupplier;
+
 // standard twitter snowflake, 64 bits:
 // [1 unused (always 0) | 41 ms since EPOCH | 10 instance | 12 sequence]
 // 1024 instances, 4096 ids per ms per instance, ~69 (nice) years from EPOCH
@@ -20,6 +22,12 @@ public final class Snowflake {
 	
 	public static Snowflake get() {
 		return global;
+	}
+	
+	private static final LongSupplier SUPPLIER = () -> get().nextId();
+	
+	public static LongSupplier supplier() {
+		return SUPPLIER;
 	}
 	
 	public static Snowflake configureGlobal(Snowflake snowflake) {

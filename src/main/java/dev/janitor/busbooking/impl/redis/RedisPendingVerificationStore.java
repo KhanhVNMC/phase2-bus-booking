@@ -18,9 +18,9 @@ public class RedisPendingVerificationStore implements IPendingVerificationStore 
 	private final RedisDict<Boolean> resendCooldowns = new RedisDict<>(COOLDOWN_PREFIX, Boolean.class);
 	
 	@Override
-	public void put(String email, PendingEmailVerification pendingVerification, long ttlMillis) {
+	public void put(String email, PendingEmailVerification pendingVerification, long ttlMs) {
 		failedAttempts.clear(email);
-		pendingVerifications.put(email, pendingVerification, Duration.ofMillis(ttlMillis));
+		pendingVerifications.put(email, pendingVerification, Duration.ofMillis(ttlMs));
 	}
 	
 	@Override
@@ -36,12 +36,12 @@ public class RedisPendingVerificationStore implements IPendingVerificationStore 
 	}
 	
 	@Override
-	public long recordFailedAttempt(String email, long ttlMillis) {
-		return failedAttempts.increment(email, Duration.ofMillis(ttlMillis));
+	public long recordFailedAttempt(String email, long ttlMs) {
+		return failedAttempts.increment(email, Duration.ofMillis(ttlMs));
 	}
 	
 	@Override
-	public boolean tryStartResendCooldown(String email, long cooldownMillis) {
-		return resendCooldowns.putIfAbsent(email, true, Duration.ofMillis(cooldownMillis));
+	public boolean tryStartResendCooldown(String email, long cooldownMs) {
+		return resendCooldowns.putIfAbsent(email, true, Duration.ofMillis(cooldownMs));
 	}
 }

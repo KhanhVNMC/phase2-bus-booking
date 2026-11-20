@@ -46,7 +46,7 @@ public final class RedisDict<V> {
 	 * @throws IllegalArgumentException if the key is null or serialization fails
 	 */
 	public void put(String key, V value) {
-		client().set(toRedisKey(key), serialize(key, value));
+		this.client().set(this.toRedisKey(key), this.serialize(key, value));
 	}
 
 	/**
@@ -58,9 +58,9 @@ public final class RedisDict<V> {
 	 * @throws IllegalArgumentException if the key or duration is invalid, or serialization fails
 	 */
 	public void put(String key, V value, Duration duration) {
-		client().set(
-			toRedisKey(key), serialize(key, value),
-			SetParams.setParams().px(toPositiveMillis(duration))
+		this.client().set(
+			this.toRedisKey(key), this.serialize(key, value),
+			SetParams.setParams().px(this.toPositiveMs(duration))
 		);
 	}
 
@@ -73,9 +73,9 @@ public final class RedisDict<V> {
 	 * @return {@code true} if the value was stored
 	 */
 	public boolean putIfAbsent(String key, V value, Duration duration) {
-		String response = client().set(
-			toRedisKey(key), serialize(key, value),
-			SetParams.setParams().nx().px(toPositiveMillis(duration))
+		String response = this.client().set(
+			this.toRedisKey(key), this.serialize(key, value),
+			SetParams.setParams().nx().px(this.toPositiveMs(duration))
 		);
 		return "OK".equals(response);
 	}
@@ -89,12 +89,12 @@ public final class RedisDict<V> {
 	 * @return {@code true} if the expiration was renewed
 	 */
 	public boolean renewIfEquals(String key, V expected, Duration duration) {
-		String expectedJson = serialize(key, expected);
-		String response = client().set(
-			toRedisKey(key), expectedJson,
+		String expectedJson = this.serialize(key, expected);
+		String response = this.client().set(
+			this.toRedisKey(key), expectedJson,
 			SetParams.setParams()
 				.condition(CompareCondition.valueEq(expectedJson))
-			.px(toPositiveMillis(duration))
+			.px(this.toPositiveMs(duration))
 		);
 		return "OK".equals(response);
 	}
@@ -109,12 +109,12 @@ public final class RedisDict<V> {
 	 * @return {@code true} if the value was replaced
 	 */
 	public boolean replaceIfEquals(String key, V expected, V value, Duration duration) {
-		String expectedJson = serialize(key, expected);
-		String response = client().set(
-			toRedisKey(key), serialize(key, value),
+		String expectedJson = this.serialize(key, expected);
+		String response = this.client().set(
+			this.toRedisKey(key), this.serialize(key, value),
 			SetParams.setParams()
 				.condition(CompareCondition.valueEq(expectedJson))
-			.px(toPositiveMillis(duration))
+			.px(this.toPositiveMs(duration))
 		);
 		return "OK".equals(response);
 	}
@@ -127,7 +127,7 @@ public final class RedisDict<V> {
 	 * @throws IllegalStateException if deserialization fails
 	 */
 	public V get(String key) {
-		return deserialize(key, client().get(toRedisKey(key)));
+		return this.deserialize(key, this.client().get(this.toRedisKey(key)));
 	}
 
 	/**
@@ -143,12 +143,12 @@ public final class RedisDict<V> {
 			return values;
 		}
 		String[] redisKeys = new String[keys.size()];
-		for (int index = 0; index < keys.size(); index++) {
-			redisKeys[index] = toRedisKey(keys.get(index));
+		for (int i = 0; i < keys.size(); ++i) {
+			redisKeys[i] = this.toRedisKey(keys.get(i));
 		}
-		List<String> jsons = client().mget(redisKeys);
-		for (int index = 0; index < keys.size(); index++) {
-			values.add(deserialize(keys.get(index), jsons.get(index)));
+		List<String> jsons = this.client().mget(redisKeys);
+		for (int i = 0; i < keys.size(); ++i) {
+			values.add(this.deserialize(keys.get(i), jsons.get(i)));
 		}
 		return values;
 	}
@@ -164,10 +164,10 @@ public final class RedisDict<V> {
 			return 0;
 		}
 		String[] redisKeys = new String[keys.size()];
-		for (int index = 0; index < keys.size(); index++) {
-			redisKeys[index] = toRedisKey(keys.get(index));
+		for (int i = 0; i < keys.size(); ++i) {
+			redisKeys[i] = this.toRedisKey(keys.get(i));
 		}
-		return client().del(redisKeys);
+		return this.client().del(redisKeys);
 	}
 	
 	/**
@@ -177,7 +177,7 @@ public final class RedisDict<V> {
 	 * @return {@code true} if the key exists
 	 */
 	public boolean containsKey(String key) {
-		return client().exists(toRedisKey(key));
+		return this.client().exists(this.toRedisKey(key));
 	}
 
 	/**
@@ -188,7 +188,7 @@ public final class RedisDict<V> {
 	 * @throws IllegalStateException if deserialization fails
 	 */
 	public V remove(String key) {
-		return deserialize(key, client().getDel(toRedisKey(key)));
+		return this.deserialize(key, this.client().getDel(this.toRedisKey(key)));
 	}
 
 	/**
@@ -199,9 +199,9 @@ public final class RedisDict<V> {
 	 * @return {@code true} if the value was removed
 	 */
 	public boolean removeIfEquals(String key, V expected) {
-		String expectedJson = serialize(key, expected);
-		return client().delex(
-			toRedisKey(key),
+		String expectedJson = this.serialize(key, expected);
+		return this.client().delex(
+			this.toRedisKey(key),
 			CompareCondition.valueEq(expectedJson)
 		) == 1L;
 	}
@@ -214,7 +214,7 @@ public final class RedisDict<V> {
 	 * @return {@code true} if the expiration was set
 	 */
 	public boolean expire(String key, Duration duration) {
-		return client().pexpire(toRedisKey(key), toPositiveMillis(duration)) == 1L;
+		return this.client().pexpire(this.toRedisKey(key), this.toPositiveMs(duration)) == 1L;
 	}
 
 	/**
@@ -224,7 +224,7 @@ public final class RedisDict<V> {
 	 * @return the remaining seconds, {@code -1} without expiration, or {@code -2} if absent
 	 */
 	public long getTTL(String key) {
-		return client().ttl(toRedisKey(key));
+		return this.client().ttl(this.toRedisKey(key));
 	}
 
 	/**
@@ -237,7 +237,7 @@ public final class RedisDict<V> {
 		ScanParams params = new ScanParams().match(prefix + ":*").count(SCAN_BATCH_SIZE);
 		String cursor = ScanParams.SCAN_POINTER_START;
 		do {
-			ScanResult<String> result = client().scan(cursor, params);
+			ScanResult<String> result = this.client().scan(cursor, params);
 			keys.addAll(result.getResult());
 			cursor = result.getCursor();
 		} while (!ScanParams.SCAN_POINTER_START.equals(cursor));
@@ -250,7 +250,7 @@ public final class RedisDict<V> {
 	 * @return the number of matching keys
 	 */
 	public int count() {
-		return keySet().size();
+		return this.keySet().size();
 	}
 	
 	private String toRedisKey(String key) {
@@ -283,7 +283,7 @@ public final class RedisDict<V> {
 		}
 	}
 
-	private long toPositiveMillis(Duration duration) {
+	private long toPositiveMs(Duration duration) {
 		if (duration == null || duration.isNegative() || duration.isZero()) {
 			throw new IllegalArgumentException("Expiration duration must be positive");
 		}

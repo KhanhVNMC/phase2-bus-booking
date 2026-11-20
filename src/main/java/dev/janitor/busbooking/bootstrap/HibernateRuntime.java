@@ -29,6 +29,8 @@ import org.hibernate.jpa.HibernatePersistenceConfiguration;
  */
 public final class HibernateRuntime implements AutoCloseable {
 	// every @Entity goes here
+	public static final String ONE_HOLD_PER_USER_INDEX = "uq_bookings_one_hold_per_user";
+	
 	private static final Class<?>[] MANAGED_ENTITIES = {
 		LocationEntity.class,
 		OperatorEntity.class,
@@ -76,12 +78,12 @@ public final class HibernateRuntime implements AutoCloseable {
 			.createEntityManagerFactory();
 			ensurePostgresExtensions(entityManagerFactory, config.isDatabaseInstallExtensions());
 			ensurePartialIndexes(entityManagerFactory);
-		} catch (RuntimeException exception) {
+		} catch (RuntimeException e) {
 			if (entityManagerFactory != null) {
 				entityManagerFactory.close();
 			}
 			this.dataSource.close();
-			throw exception;
+			throw e;
 		}
 		this.entityManagerFactory = entityManagerFactory;
 	}
@@ -107,11 +109,11 @@ public final class HibernateRuntime implements AutoCloseable {
 				transaction.begin();
 				entityManager.createNativeQuery("CREATE EXTENSION IF NOT EXISTS unaccent").executeUpdate();
 				transaction.commit();
-			} catch (RuntimeException exception) {
+			} catch (RuntimeException e) {
 				if (transaction.isActive()) {
 					transaction.rollback();
 				}
-				throw exception;
+				throw e;
 			}
 		}
 	}
@@ -124,16 +126,16 @@ public final class HibernateRuntime implements AutoCloseable {
 				transaction.begin();
 				// one PAYMENT_HOLDING booking per user: a second concurrent hold fails its insert,
 				// which rolls its seat claim back with it
-				entityManager.createNativeQuery("""
-					CREATE UNIQUE INDEX IF NOT EXISTS uq_bookings_one_hold_per_user
-					ON bookings (user_id) WHERE status = 'PAYMENT_HOLDING'
-				""").executeUpdate();
+				entityManager.createNativeQuery(
+					"CREATE UNIQUE INDEX IF NOT EXISTS " + ONE_HOLD_PER_USER_INDEX
+					+ " ON bookings (user_id) WHERE status = 'PAYMENT_HOLDING'"
+				).executeUpdate();
 				transaction.commit();
-			} catch (RuntimeException exception) {
+			} catch (RuntimeException e) {
 				if (transaction.isActive()) {
 					transaction.rollback();
 				}
-				throw exception;
+				throw e;
 			}
 		}
 	}
@@ -145,11 +147,11 @@ public final class HibernateRuntime implements AutoCloseable {
 		pool.setPassword(config.getDatabasePassword());
 		pool.setMinimumIdle(config.getDatabasePoolMinimumIdle());
 		pool.setMaximumPoolSize(config.getDatabasePoolMaximumSize());
-		pool.setConnectionTimeout(config.getDatabaseConnectionTimeoutMillis());
-		pool.setValidationTimeout(config.getDatabaseValidationTimeoutMillis());
-		pool.setIdleTimeout(config.getDatabaseIdleTimeoutMillis());
-		pool.setMaxLifetime(config.getDatabaseMaxLifetimeMillis());
-		pool.setInitializationFailTimeout(config.getDatabaseConnectionTimeoutMillis());
+		pool.setConnectionTimeout(config.getDatabaseConnectionTimeoutMs());
+		pool.setValidationTimeout(config.getDatabaseValidationTimeoutMs());
+		pool.setIdleTimeout(config.getDatabaseIdleTimeoutMs());
+		pool.setMaxLifetime(config.getDatabaseMaxLifetimeMs());
+		pool.setInitializationFailTimeout(config.getDatabaseConnectionTimeoutMs());
 		pool.setPoolName(config.getDatabaseName());
 		return pool;
 	}
@@ -164,11 +166,11 @@ public final class HibernateRuntime implements AutoCloseable {
 		if (config.getDatabasePoolMinimumIdle() > config.getDatabasePoolMaximumSize()) {
 			throw new IllegalArgumentException("DATABASE_POOL_MINIMUM_IDLE cannot exceed DATABASE_POOL_MAXIMUM_SIZE");
 		}
-		if (config.getDatabaseConnectionTimeoutMillis() < 250) {
-			throw new IllegalArgumentException("DATABASE_CONNECTION_TIMEOUT_MILLIS must be at least 250");
+		if (config.getDatabaseConnectionTimeoutMs() < 250) {
+			throw new IllegalArgumentException("DATABASE_CONNECTION_TIMEOUT_MS must be at least 250");
 		}
-		if (config.getDatabaseValidationTimeoutMillis() < 250) {
-			throw new IllegalArgumentException("DATABASE_VALIDATION_TIMEOUT_MILLIS must be at least 250");
+		if (config.getDatabaseValidationTimeoutMs() < 250) {
+			throw new IllegalArgumentException("DATABASE_VALIDATION_TIMEOUT_MS must be at least 250");
 		}
 		switch (config.getDatabaseSchemaMode()) {
 			case "none", "validate", "update", "create", "create-drop" -> {}
@@ -179,31 +181,31 @@ public final class HibernateRuntime implements AutoCloseable {
 	}
 
 	public <T> T find(Class<T> entityClass, Object primaryKey) {
-		try (var entityManager = openEntityManager()) {
+		try (var entityManager = this.openEntityManager()) {
 			return entityManager.find(entityClass, primaryKey);
 		}
 	}
 
 	public <T> T grabQuickie(Function<EntityManager, T> grab) {
-		try (var entityManager = openEntityManager()) {
+		try (var entityManager = this.openEntityManager()) {
 			return grab.apply(entityManager);
 		}
 	}
 
 	// all or nothing: commits if work returns, rolls back if it throws
 	public <T> T transact(Function<EntityManager, T> work) {
-		try (var entityManager = openEntityManager()) {
+		try (var entityManager = this.openEntityManager()) {
 			EntityTransaction transaction = entityManager.getTransaction();
 			transaction.begin();
 			try {
 				T result = work.apply(entityManager);
 				transaction.commit();
 				return result;
-			} catch (RuntimeException exception) {
+			} catch (RuntimeException e) {
 				if (transaction.isActive()) {
 					transaction.rollback();
 				}
-				throw exception;
+				throw e;
 			}
 		}
 	}

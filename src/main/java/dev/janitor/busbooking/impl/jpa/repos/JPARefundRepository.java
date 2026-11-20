@@ -36,6 +36,25 @@ public class JPARefundRepository implements IRefundRepository {
 	}
 	
 	@Override
+	public boolean refundLatePayment(long refundId, long bookingId, long createdAt) {
+		return runtime.transact(man -> {
+			// a webhook retried twice must not refund twice, the unique booking_id settles it
+			var insert = man.createNativeQuery("""
+				INSERT INTO refunds (refund_id, booking_id, amount, status, attempts, created_at, next_attempt_at, issued_at)
+				SELECT :refund_id, b.booking_id, b.total_amount, 'PENDING', 0, :created_at, :created_at, 0
+				FROM bookings b
+				WHERE b.booking_id = :booking_id AND b.status = 'ABANDONED_PAYMENT'
+				ON CONFLICT (booking_id) DO NOTHING
+			""");
+			insert.setParameter("refund_id", refundId);
+			insert.setParameter("booking_id", bookingId);
+			insert.setParameter("created_at", createdAt);
+			int insertedRows = insert.executeUpdate();
+			return insertedRows == 1;
+		});
+	}
+	
+	@Override
 	public List<Refund> findDue(long now, int limit) {
 		try (var man = runtime.openEntityManager()) {
 			var query = man.createQuery("""

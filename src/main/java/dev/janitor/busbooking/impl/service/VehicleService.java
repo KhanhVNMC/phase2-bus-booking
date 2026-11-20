@@ -45,7 +45,7 @@ public class VehicleService implements IVehicleService {
 	
 	@Override
 	public Vehicle create(long operatorId, String licensePlate, String vehicleType, Integer seatCapacity, List<String> seatLabels) {
-		requireActiveOperator(operatorId);
+		this.requireActiveOperator(operatorId);
 		String plate = normalizePlate(licensePlate);
 		if (vehicleRepo.existsByPlate(plate)) {
 			throw ServiceException.conflict("A vehicle with this license plate already exists");
@@ -70,7 +70,7 @@ public class VehicleService implements IVehicleService {
 		long vehicleId, long operatorId, String licensePlate, String vehicleType,
 		Integer seatCapacity, List<String> seatLabels, VehicleStatus status
 	) {
-		Vehicle current = get(vehicleId);
+		Vehicle current = this.get(vehicleId);
 		if (status == null) {
 			throw ServiceException.invalid("status is required");
 		}
@@ -98,7 +98,7 @@ public class VehicleService implements IVehicleService {
 		}
 		// a retired bus can sit under a retired operator, anything else needs a live one
 		if (operatorChanged || status != VehicleStatus.INACTIVE) {
-			requireActiveOperator(operatorId);
+			this.requireActiveOperator(operatorId);
 		}
 		Vehicle vehicle = new Vehicle(
 			vehicleId, operatorId, current.licensePlate(), current.vehicleType(),

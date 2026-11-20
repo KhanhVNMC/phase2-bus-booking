@@ -38,7 +38,7 @@ public class RouteService implements IRouteService {
 	
 	@Override
 	public Route create(long originId, long destinationId, Integer estimatedDurationMinutes) {
-		requireEndpoints(originId, destinationId);
+		this.requireEndpoints(originId, destinationId);
 		Route route = new Route(
 			Snowflake.get().nextId(),
 			originId,
@@ -46,13 +46,13 @@ public class RouteService implements IRouteService {
 			Sputnik.requireRange(estimatedDurationMinutes, "estimatedDurationMinutes", 1, MAX_DURATION_MINUTES),
 			ActiveStatus.ACTIVE
 		);
-		requireUnique(route);
+		this.requireUnique(route);
 		return routeRepo.create(route);
 	}
 	
 	@Override
 	public Route update(long routeId, long originId, long destinationId, Integer estimatedDurationMinutes, ActiveStatus status) {
-		Route current = get(routeId);
+		Route current = this.get(routeId);
 		if (status == null) {
 			throw ServiceException.invalid("status is required");
 		}
@@ -60,7 +60,7 @@ public class RouteService implements IRouteService {
 		// if the endpoints (origin, dest) changed and the trip has been used before (past or active). refuse
 		// to allow it to be edited because it is scammy so
 		if (endpointsChanged) {
-			requireEndpoints(originId, destinationId);
+			this.requireEndpoints(originId, destinationId);
 			if (routeRepo.hasAnyTrips(routeId)) {
 				throw ServiceException.conflict("Origin and destination are frozen once the route has trips");
 			}
@@ -72,7 +72,7 @@ public class RouteService implements IRouteService {
 			Sputnik.requireRange(estimatedDurationMinutes, "estimatedDurationMinutes", 1, MAX_DURATION_MINUTES),
 			status
 		);
-		requireUnique(route);
+		this.requireUnique(route);
 		boolean retiring = current.status() == ActiveStatus.ACTIVE && status == ActiveStatus.INACTIVE;
 		// a route cannot be retired if people are still scheduled OR is still ON IT 
 		if (retiring && routeRepo.hasActiveTrips(routeId)) {

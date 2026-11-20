@@ -43,13 +43,13 @@ public class OperatorService implements IOperatorService {
 			ActiveStatus.ACTIVE,
 			System.currentTimeMillis()
 		);
-		requireUnique(operator);
+		this.requireUnique(operator);
 		return operatorRepo.create(operator);
 	}
 	
 	@Override
 	public Operator update(long operatorId, String name, String address, String phone, String email, ActiveStatus status) {
-		Operator current = get(operatorId);
+		Operator current = this.get(operatorId);
 		if (status == null) {
 			throw ServiceException.invalid("status is required");
 		}
@@ -62,7 +62,7 @@ public class OperatorService implements IOperatorService {
 			status,
 			current.createdAt()
 		);
-		requireUnique(operator);
+		this.requireUnique(operator);
 		boolean retiring = current.status() == ActiveStatus.ACTIVE && status == ActiveStatus.INACTIVE;
 		// basically if you flip ACTIVE -> INACTIVE operators (nha xe) that still owns active vehicle
 		// -> refuse, because an inactive operator cannot operate in service vehicles ffs

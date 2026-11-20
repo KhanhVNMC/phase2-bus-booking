@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Optional;
 
 import dev.janitor.busbooking.consts.BookingStatus;
+import dev.janitor.busbooking.consts.ReserveResult;
 import dev.janitor.busbooking.consts.SeatsType;
 import dev.janitor.busbooking.model.Booking;
 import dev.janitor.busbooking.repository.IBookingRepository;
@@ -35,17 +36,19 @@ public class CacheTicketingBookingRepository implements IBookingRepository {
 	}
 	
 	@Override
-	public boolean reserve(Booking booking, SeatsType seatsType) {
-		boolean reserved = bookings.reserve(booking, seatsType);
-		if (reserved) {
+	public ReserveResult reserve(Booking booking, SeatsType seatsType) {
+		ReserveResult reserved = bookings.reserve(booking, seatsType);
+		if (reserved == ReserveResult.RESERVED) {
+			// a reserve is not a top priority thing to punch through the cache, so put it 
+			// in economy class
 			invalidationQueue.economy(booking.tripId());
 		}
 		return reserved;
 	}
 	
 	@Override
-	public boolean confirm(long bookingId, long holdCutoff, long bookedAt) {
-		return bookings.confirm(bookingId, holdCutoff, bookedAt);
+	public boolean confirm(long bookingId, long now, long paymentExpiryMs) {
+		return bookings.confirm(bookingId, now, paymentExpiryMs);
 	}
 	
 	@Override
@@ -55,6 +58,8 @@ public class CacheTicketingBookingRepository implements IBookingRepository {
 			// trip id never changes after creation, a plain read is fine
 			Optional<Booking> booking = bookings.get(bookingId);
 			if (booking.isPresent()) {
+				// a release is too not a top priority thing to punch through the cache, so put it 
+				// in economy class
 				invalidationQueue.economy(booking.get().tripId());
 			}
 		}
@@ -62,7 +67,7 @@ public class CacheTicketingBookingRepository implements IBookingRepository {
 	}
 	
 	@Override
-	public List<Booking> findExpiredHolds(long cutoff, int limit) {
-		return bookings.findExpiredHolds(cutoff, limit);
+	public List<Booking> findExpiredHolds(long now, long paymentExpiryMs, int limit) {
+		return bookings.findExpiredHolds(now, paymentExpiryMs, limit);
 	}
 }

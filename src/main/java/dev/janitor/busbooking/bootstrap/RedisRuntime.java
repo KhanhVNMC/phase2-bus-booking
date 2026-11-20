@@ -46,8 +46,8 @@ public final class RedisRuntime implements AutoCloseable {
 			: config.getRedisUrl()
 		);
 		DefaultJedisClientConfig clientConfig = DefaultJedisClientConfig.builder(redisUri)
-			.connectionTimeoutMillis(config.getRedisConnectionTimeoutMillis())
-			.socketTimeoutMillis(config.getRedisSocketTimeoutMillis())
+			.connectionTimeoutMillis(config.getRedisConnectionTimeoutMs())
+			.socketTimeoutMillis(config.getRedisSocketTimeoutMs())
 			.clientName("janitor-redis")
 		.build();
 		ConnectionPoolConfig poolConfig = new ConnectionPoolConfig();
@@ -74,11 +74,11 @@ public final class RedisRuntime implements AutoCloseable {
 	}
 	
 	private static void validateConfig(ApplicationConfig config) {
-		if (config.getRedisConnectionTimeoutMillis() < 1) {
-			throw new IllegalArgumentException("REDIS_CONNECTION_TIMEOUT_MILLIS must be positive");
+		if (config.getRedisConnectionTimeoutMs() < 1) {
+			throw new IllegalArgumentException("REDIS_CONNECTION_TIMEOUT_MS must be positive");
 		}
-		if (config.getRedisSocketTimeoutMillis() < 1) {
-			throw new IllegalArgumentException("REDIS_SOCKET_TIMEOUT_MILLIS must be positive");
+		if (config.getRedisSocketTimeoutMs() < 1) {
+			throw new IllegalArgumentException("REDIS_SOCKET_TIMEOUT_MS must be positive");
 		}
 		if (config.getRedisPoolMinimumIdle() < 0) {
 			throw new IllegalArgumentException("REDIS_POOL_MINIMUM_IDLE cannot be negative");

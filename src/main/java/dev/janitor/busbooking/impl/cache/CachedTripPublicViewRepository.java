@@ -8,11 +8,12 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 
 import dev.janitor.busbooking.bootstrap.ApplicationConfig;
 import dev.janitor.busbooking.consts.ServiceFailure;
 import dev.janitor.busbooking.database.redis.RedisDict;
+import dev.janitor.busbooking.database.redis.RedisLeaseDispenser;
+import dev.janitor.busbooking.database.redis.RedisLeaseDispenser.RedisLease;
 import dev.janitor.busbooking.model.TripPublicView;
 import dev.janitor.busbooking.repository.ITripPublicViewRepository;
 import dev.janitor.busbooking.service.ServiceException;
@@ -22,23 +23,22 @@ import dev.janitor.busbooking.service.ServiceException;
 // everyone else polls redis until the value shows up, or gives up with 503
 public class CachedTripPublicViewRepository implements ITripPublicViewRepository {
 	public static final String VIEW_PREFIX = "janitor:tripview";
-	private static final String LEASE_PREFIX = "janitor:tripview:lease";
+	public static final String LEASE_PREFIX = "janitor:tripview:lease";
 	
 	private final ITripPublicViewRepository database;
 	private final RedisDict<TripPublicView> cachedPublicViews = new RedisDict<>(VIEW_PREFIX, TripPublicView.class);
-	private final RedisDict<String> rehydrateLeases = new RedisDict<>(LEASE_PREFIX, String.class);
+	private final RedisLeaseDispenser rehydrateLeases;
 	
 	private final Duration viewTtl;
-	private final Duration leaseTtl;
-	private final long waitTimeoutMillis;
-	private final long waitPollMillis;
+	private final long waitTimeoutMs;
+	private final long waitPollMs;
 	
 	public CachedTripPublicViewRepository(ITripPublicViewRepository database, ApplicationConfig config) {
 		this.database = database;
 		this.viewTtl = Duration.ofSeconds(config.getTripCacheTtlSeconds());
-		this.leaseTtl = Duration.ofMillis(config.getTripCacheLeaseTtlMillis());
-		this.waitTimeoutMillis = config.getTripCacheWaitTimeoutMillis();
-		this.waitPollMillis = config.getTripCacheWaitPollMillis();
+		this.rehydrateLeases = new RedisLeaseDispenser(LEASE_PREFIX, Duration.ofMillis(config.getTripCacheLeaseTtlMs()));
+		this.waitTimeoutMs = config.getTripCacheWaitTimeoutMs();
+		this.waitPollMs = config.getTripCacheWaitPollMs();
 	}
 	
 	@Override
@@ -48,11 +48,12 @@ public class CachedTripPublicViewRepository implements ITripPublicViewRepository
 	
 	@Override
 	public List<TripPublicView> getMany(List<Long> tripIds) {
+		final LinkedHashSet<Long> uniqueTrips = new LinkedHashSet<>(tripIds);  // make sure no dupes
+		final long giveupTimestamp = System.currentTimeMillis() + this.waitTimeoutMs;
+		
 		Map<Long, TripPublicView> foundViews = new HashMap<>();
 		Set<Long> nonexistentTrips = new HashSet<>();
-		List<Long> pendingTrips = new ArrayList<>(new LinkedHashSet<>(tripIds)); // make sure no dupes
-		long giveupTimestamp = System.currentTimeMillis() + this.waitTimeoutMillis;
-		
+		List<Long> pendingTrips = new ArrayList<>(uniqueTrips);
 		do {
 			// plain read from redis, no lock needed, just read
 			List<TripPublicView> cachedViews = cachedPublicViews.getAll(toKeys(pendingTrips));
@@ -82,7 +83,7 @@ public class CachedTripPublicViewRepository implements ITripPublicViewRepository
 		} while (true);
 		
 		List<TripPublicView> orderedViews = new ArrayList<>();
-		for (long tripId : pendingTrips) { // do NOT resend duplicates
+		for (long tripId : uniqueTrips) { // do NOT resend duplicates
 			TripPublicView view = foundViews.get(tripId);
 			if (view != null) {
 				orderedViews.add(view);
@@ -93,40 +94,50 @@ public class CachedTripPublicViewRepository implements ITripPublicViewRepository
 	
 	// leases every trip it can (already leased ones are skipped), rebuilds them all in one db query,
 	private int rehydrate(List<Long> tripIds, Map<Long, TripPublicView> outBuiltViews, Set<Long> outNonexistentTrips) {
-		String leaseToken = UUID.randomUUID().toString();
-		List<Long> leasedTrips = new ArrayList<>();
+		Map<Long, RedisLease> heldLeases = new HashMap<>();
 		try {
 			for (Long tripId : tripIds) {
 				// only build what we can touch (we leased it, nobody else was touching them)
 				// this will acquire the lease to the system
-				if (rehydrateLeases.putIfAbsent(String.valueOf(tripId), leaseToken, this.leaseTtl)) {
-					leasedTrips.add(tripId);
+				RedisLease lease = rehydrateLeases.acquireNow(String.valueOf(tripId));
+				if (lease != null) {
+					heldLeases.put(tripId, lease);
 				}
 			}
+			List<Long> leasedTrips = new ArrayList<>(heldLeases.keySet());
 			// we can touch nobody, they're being rebuilt already, return early
 			if (leasedTrips.isEmpty()) {
 				return 0;
 			}
 			int rehydratedViews = 0;
+			Set<Long> existingTrips = new HashSet<>();
 			// rebuild and cache each one of them into redis
 			// also return it locally via a PBP map too so we can append it 
 			//instead of doing another redis round trip
 			for (TripPublicView view : database.getMany(leasedTrips)) {
-				cachedPublicViews.put(String.valueOf(view.trip().id()), view, this.viewTtl);
+				existingTrips.add(view.trip().id());
+				String tripKey = String.valueOf(view.trip().id());
+				// the db read may have outlived our lease, then a flusher could have taken it and deleted
+				// in between: what we hold is stale, drop it. renewing also buys a fresh ttl for the put below
+				if (!heldLeases.get(view.trip().id()).renew()) {
+					continue; // lost the lease, thank you postgres, gg
+				}
+				cachedPublicViews.put(tripKey, view, this.viewTtl);
 				outBuiltViews.put(view.trip().id(), view);
 				++rehydratedViews;
 			}
 			for (long tripId : leasedTrips) {
 				// if user fetched for crap, return back crap, GIGO
-				if (!outBuiltViews.containsKey(tripId)) {
+				// (a view dropped for a lost lease still exists, it just goes back to polling)
+				if (!existingTrips.contains(tripId)) {
 					outNonexistentTrips.add(tripId);
 				}
 			}
 			return rehydratedViews;
 		} finally {
 			// only our own leases: one that expired and got taken by someone else is not ours to drop
-			for (long tripId : leasedTrips) {
-				rehydrateLeases.removeIfEquals(String.valueOf(tripId), leaseToken);
+			for (RedisLease lease : heldLeases.values()) {
+				lease.close();
 			}
 		}
 	}
@@ -134,8 +145,8 @@ public class CachedTripPublicViewRepository implements ITripPublicViewRepository
 	private void sleepPoll() {
 		// defensive programming 101
 		try {
-			Thread.sleep(waitPollMillis);
-		} catch (InterruptedException exception) {
+			Thread.sleep(waitPollMs);
+		} catch (InterruptedException e) {
 			Thread.currentThread().interrupt();
 			throw new ServiceException(ServiceFailure.UNAVAILABLE, "Interrupted while waiting for trip data");
 		}

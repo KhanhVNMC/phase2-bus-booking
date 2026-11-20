@@ -36,15 +36,15 @@ public class Main {
 			Javalin application = new JanitorAPI().start(config.getServerHost(), config.getServerPort());
 			try {
 				registerShutdownHook(application, redis, hibernate);
-			} catch (RuntimeException error) {
+			} catch (RuntimeException e) {
 				application.stop();
-				throw error;
+				throw e;
 			}
 			System.out.println("[system] Ready! Subsystem and services started in " + (System.currentTimeMillis() - time) + "ms");
-		} catch (Exception error) {
+		} catch (Exception e) {
 			if (redis != null) { redis.close(); }
 			hibernate.close();
-			throw error;
+			throw e;
 		}
 	}
 

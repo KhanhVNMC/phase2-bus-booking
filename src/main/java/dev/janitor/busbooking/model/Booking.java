@@ -9,10 +9,12 @@ public record Booking(
 	long tripId,
 	String passengerName,
 	String passengerPhone,
+	
 	long unitPrice, // copied from trip.price
 	SeatSet desiredAssignedSeats, // ASSIGNED_SEATING: bit i -> trip.assignedSeatNames[i]. blind otherwise
 	int desiredOpenSeatsCount, // OPEN_SEATING. blind otherwise
 	long totalAmount, // unitPrice * (OPEN_SEATING ? desiredOpenSeatsCount : desiredAssignedSeats.popcount())
+	
 	BookingStatus status,
 	long paymentStartTime, // the hold gc sweeps on this
 	long bookedAt, // CONFIRMED only

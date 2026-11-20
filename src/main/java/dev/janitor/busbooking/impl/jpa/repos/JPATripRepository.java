@@ -36,25 +36,6 @@ public class JPATripRepository implements ITripRepository {
 	}
 	
 	@Override
-	public List<Trip> search(Long originId, Long destinationId, Long departureFrom, Long departureTo) {
-		String jpql = "SELECT t FROM TripEntity t JOIN RouteEntity r ON r.id = t.routeId WHERE 1 = 1";
-		if (originId != null) jpql += " AND r.originId = :origin_id";
-		if (destinationId != null) jpql += " AND r.destinationId = :destination_id";
-		if (departureFrom != null) jpql += " AND t.departureTime >= :departure_from";
-		if (departureTo != null) jpql += " AND t.departureTime < :departure_to";
-		jpql += " ORDER BY t.departureTime";
-		
-		try (var man = runtime.openEntityManager()) {
-			var query = man.createQuery(jpql, TripEntity.class);
-			if (originId != null) query.setParameter("origin_id", originId);
-			if (destinationId != null) query.setParameter("destination_id", destinationId);
-			if (departureFrom != null) query.setParameter("departure_from", departureFrom);
-			if (departureTo != null) query.setParameter("departure_to", departureTo);
-			return toModels(query.getResultList());
-		}
-	}
-	
-	@Override
 	public List<Trip> adminSearch(Long routeId, TripStatus status, Long departureFrom, Long departureTo) {
 		String jpql = "SELECT t FROM TripEntity t WHERE 1 = 1";
 		if (routeId != null) jpql += " AND t.routeId = :route_id";

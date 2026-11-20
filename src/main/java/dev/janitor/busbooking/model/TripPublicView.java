@@ -30,9 +30,9 @@ public record TripPublicView(
 			return bookedNames;
 		}
 		List<String> seatNames = trip.assignedSeatNames();
-		for (int seatIndex = 0; seatIndex < seatNames.size(); seatIndex++) {
-			if (trip.assignedSeatingBooked().get(seatIndex)) {
-				bookedNames.add(seatNames.get(seatIndex));
+		for (int i = 0; i < seatNames.size(); ++i) {
+			if (trip.assignedSeatingBooked().get(i)) {
+				bookedNames.add(seatNames.get(i));
 			}
 		}
 		return bookedNames;

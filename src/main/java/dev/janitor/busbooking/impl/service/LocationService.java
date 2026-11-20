@@ -39,20 +39,20 @@ public class LocationService implements ILocationService {
 			Sputnik.requireText(province, "province", 100),
 			Sputnik.requireText(address, "address", 255)
 		);
-		requireUnique(location);
+		this.requireUnique(location);
 		return locationRepo.create(location);
 	}
 	
 	@Override
 	public Location update(long locationId, String name, String province, String address) {
-		get(locationId);
+		this.get(locationId);
 		Location location = new Location(
 			locationId,
 			Sputnik.requireText(name, "name", 100),
 			Sputnik.requireText(province, "province", 100),
 			Sputnik.requireText(address, "address", 255)
 		);
-		requireUnique(location);
+		this.requireUnique(location);
 		return locationRepo.update(location);
 	}
 	

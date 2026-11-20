@@ -5,7 +5,10 @@ import java.util.List;
 import java.util.Optional;
 
 import dev.janitor.busbooking.bootstrap.HibernateRuntime;
+import org.hibernate.exception.ConstraintViolationException;
+
 import dev.janitor.busbooking.consts.BookingStatus;
+import dev.janitor.busbooking.consts.ReserveResult;
 import dev.janitor.busbooking.consts.RefundStatus;
 import dev.janitor.busbooking.consts.SeatsType;
 import dev.janitor.busbooking.impl.jpa.entities.BookingEntity;
@@ -59,7 +62,33 @@ public class JPABookingRepository implements IBookingRepository {
 	}
 	
 	@Override
-	public boolean reserve(Booking booking, SeatsType seatsType) {
+	public ReserveResult reserve(Booking booking, SeatsType seatsType) {
+		try {
+			return this.claimAndInsert(booking, seatsType);
+		} catch (RuntimeException e) {
+			// the partial unique index is the real guard, a check before the insert would race
+			// db magic, dont mind it
+			if (isConstraintViolation(e, HibernateRuntime.ONE_HOLD_PER_USER_INDEX)) {
+				return ReserveResult.ALREADY_HOLDING;
+			}
+			throw e;
+		}
+	}
+	
+	// the violation can be wrapped a few times, so walk the tree
+	private static boolean isConstraintViolation(Throwable e, String constraintName) {
+		Throwable cause = e;
+		while (cause != null) {
+			if (cause instanceof ConstraintViolationException violation
+				&& constraintName.equals(violation.getConstraintName())) {
+				return true;
+			}
+			cause = cause.getCause();
+		}
+		return false;
+	}
+	
+	private ReserveResult claimAndInsert(Booking booking, SeatsType seatsType) {
 		return runtime.transact(man -> {
 			int updatedRows;
 			if (seatsType == SeatsType.ASSIGNED_SEATING) {
@@ -96,27 +125,30 @@ public class JPABookingRepository implements IBookingRepository {
 				updatedRows = claim.executeUpdate();
 			}
 			if (updatedRows != 1) {
-				return false; // probably gone already
+				return ReserveResult.SEATS_UNAVAILABLE; // probably gone already
 			}
 			// if this insert throws, transact rolls the seat claim back with it
+			// flushed here so a violation surfaces inside the transaction, not somewhere in commit
 			man.persist(BookingEntity.fromModel(booking));
-			return true;
+			man.flush();
+			return ReserveResult.RESERVED;
 		});
 	}
 	
-	// basically this flips to CONFIRMED only fi the user current status is paying
+	// basically this flips to CONFIRMED only fi the user current status is paying (ticket is being held)
+	// and the payment deadline has not reached yet (current time is passed via now)
 	@Override
-	public boolean confirm(long bookingId, long holdCutoff, long bookedAt) {
+	public boolean confirm(long bookingId, long now, long paymentExpiryMs) {
 		return runtime.transact(man -> {
 			var update = man.createQuery("""
-				UPDATE BookingEntity b SET b.status = :confirmed, b.bookedAt = :booked_at
-				WHERE b.id = :booking_id AND b.status = :holding AND b.paymentStartTime >= :hold_cutoff
+				UPDATE BookingEntity b SET b.status = :confirmed, b.bookedAt = :now
+				WHERE b.id = :booking_id AND b.status = :holding AND (:now - b.paymentStartTime) < :payment_expiry_ms
 			""");
 			update.setParameter("confirmed", BookingStatus.CONFIRMED);
-			update.setParameter("booked_at", bookedAt);
 			update.setParameter("booking_id", bookingId);
 			update.setParameter("holding", BookingStatus.PAYMENT_HOLDING);
-			update.setParameter("hold_cutoff", holdCutoff);
+			update.setParameter("now", now);
+			update.setParameter("payment_expiry_ms", paymentExpiryMs);
 			int updatedRows = update.executeUpdate();
 			return updatedRows == 1;
 		});
@@ -200,15 +232,16 @@ public class JPABookingRepository implements IBookingRepository {
 	// basically as the user didnt pay for a seat, after a point it turns into a DoS attack
 	// this cleans it up
 	@Override
-	public List<Booking> findExpiredHolds(long cutoff, int limit) {
+	public List<Booking> findExpiredHolds(long now, long paymentExpiryMs, int limit) {
 		try (var man = runtime.openEntityManager()) {
 			var query = man.createQuery("""
 				SELECT b FROM BookingEntity b
-				WHERE b.status = :holding AND b.paymentStartTime < :cutoff
+				WHERE b.status = :holding AND (:now - b.paymentStartTime) >= :payment_expiry_ms
 				ORDER BY b.paymentStartTime
 			""", BookingEntity.class);
 			query.setParameter("holding", BookingStatus.PAYMENT_HOLDING);
-			query.setParameter("cutoff", cutoff);
+			query.setParameter("now", now);
+			query.setParameter("payment_expiry_ms", paymentExpiryMs);
 			query.setMaxResults(limit);
 			return toModels(query.getResultList());
 		}

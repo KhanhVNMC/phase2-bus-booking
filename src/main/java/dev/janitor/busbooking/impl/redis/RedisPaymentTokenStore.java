@@ -12,8 +12,8 @@ public class RedisPaymentTokenStore implements IPaymentTokenStore {
 	private final RedisDict<Long> bookingIdsByToken = new RedisDict<>(TOKEN_PREFIX, Long.class);
 	
 	@Override
-	public void put(String paymentToken, long bookingId, long ttlMillis) {
-		bookingIdsByToken.put(paymentToken, bookingId, Duration.ofMillis(ttlMillis));
+	public void put(String paymentToken, long bookingId, long ttlMs) {
+		bookingIdsByToken.put(paymentToken, bookingId, Duration.ofMillis(ttlMs));
 	}
 	
 	@Override
