@@ -81,6 +81,17 @@ public class ApplicationConfig {
 	private int tripCacheFlushBatchSize = envInt("TRIP_CACHE_FLUSH_BATCH_SIZE", 1_000);
 	private int tripCachePremiumSpinMs = envInt("TRIP_CACHE_PREMIUM_SPIN_MS", 500); // then demoted to an economy ticket
 
+	// AUTH
+	private String jwtSecret = env("JWT_SECRET", "");
+	private String jwtIssuer = env("JWT_ISSUER", "busbooking");
+	private int jwtTtlSeconds = envInt("JWT_TTL_SECONDS", 60 * 60);
+	private String emailOtpSecret = env("EMAIL_OTP_SECRET", "");
+	private int passwordHashIterations = envInt("PASSWORD_HASH_ITERATIONS", 210_000); //
+	private String bootstrapSuperAdminEmail = env("BOOTSTRAP_SUPER_ADMIN_EMAIL", "");
+	private String bootstrapSuperAdminPassword = env("BOOTSTRAP_SUPER_ADMIN_PASSWORD", "");
+	private String bootstrapSuperAdminFullName = env("BOOTSTRAP_SUPER_ADMIN_FULL_NAME", "Super Admin");
+	private String bootstrapSuperAdminPhone = env("BOOTSTRAP_SUPER_ADMIN_PHONE", "0900000000");
+
 	// EMAIL VERIFICATION
 	private int verificationCodeTtlSeconds = envInt("VERIFICATION_CODE_TTL_SECONDS", 10 * 60);
 	private int verificationMaxAttempts = envInt("VERIFICATION_MAX_ATTEMPTS", 5);
