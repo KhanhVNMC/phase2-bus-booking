@@ -118,6 +118,7 @@ public class CatalogController {
         ctx.json(mapper.vehicle(vehicle));
     }
 
+    /* Cap nhat phuong tien */
     public void updateVehicle(Context ctx) {
         APIUtils.admin(ctx);
         long vehicleId = APIUtils.pathId(ctx, "vehicleId");
@@ -132,5 +133,79 @@ public class CatalogController {
             request.status()
         );
         ctx.json(mapper.vehicle(vehicle));
+    }
+
+    // Hien thi cac nha xe voi trang thai hoat dong request yeu cau
+    public void listOperators(Context ctx) {
+        APIUtils.admin(ctx);
+        ActiveStatus status = APIUtils.queryEnum(ctx, "status", ActiveStatus.class);
+        List<OperatorResponse> responses = new ArrayList<>();
+        // Tim tat ca cac nha xe yeu cau roi tra ve
+        for (Operator operator : operatorService.search(ctx.queryParam("q"), status)) {
+            responses.add(ResponseMapper.operator(operator));
+        }
+        ctx.json(responses);
+    }
+
+    // Tao nha xe (chi admin moi dc lam)
+    public void createOperator(Context ctx) {
+        APIUtils.admin(ctx);
+        CreateOperatorRequest request = APIUtils.body(ctx, CreateOperatorRequest.class);
+        ctx.status(HttpStatus.CREATED);
+        ctx.json(ResponseMapper.operator(operatorService.create(
+        	request.name(), request.address(), 
+        	request.phone(), request.email()
+        )));
+    }
+
+    // cap nhat thong tin nha xe, chi admin, giong pha 1
+    public void updateOperator(Context ctx) {
+        APIUtils.admin(ctx);
+        long operatorId = APIUtils.pathId(ctx, "operatorId");
+        OperatorRequest request = APIUtils.body(ctx, OperatorRequest.class);
+        ctx.json(ResponseMapper.operator(operatorService.update(
+            operatorId, request.name(), request.address(), request.phone(), request.email(), request.status()
+        )));
+    }
+
+    // hien thi danh sach cac chang voi active status tu reqest
+    public void listRoutes(Context ctx) {
+        APIUtils.admin(ctx);
+        Long originId = APIUtils.queryId(ctx, "originId");
+        Long destinationId = APIUtils.queryId(ctx, "destinationId");
+        ActiveStatus status = APIUtils.queryEnum(ctx, "status", ActiveStatus.class);
+        List<RouteResponse> responses = new ArrayList<>();
+        for (Route route : routeService.search(originId, destinationId, status)) {
+            responses.add(mapper.route(route));
+        }
+        ctx.json(responses);
+    }
+
+    // khoi tao chang (admin only)
+    public void createRoute(Context ctx) {
+        APIUtils.admin(ctx);
+        CreateRouteRequest request = APIUtils.body(ctx, CreateRouteRequest.class);
+        Route route = routeService.create(
+            APIUtils.parseId(request.originId(), "originId"),
+            APIUtils.parseId(request.destinationId(), "destinationId"),
+            request.estimatedDurationMinutes()
+        );
+        ctx.status(HttpStatus.CREATED);
+        ctx.json(mapper.route(route));
+    }
+
+    // cap nhat chang (admin only)
+    public void updateRoute(Context ctx) {
+        APIUtils.admin(ctx);
+        long routeId = APIUtils.pathId(ctx, "routeId");
+        RouteRequest request = APIUtils.body(ctx, RouteRequest.class);
+        Route route = routeService.update(
+            routeId,
+            APIUtils.parseId(request.originId(), "originId"),
+            APIUtils.parseId(request.destinationId(), "destinationId"),
+            request.estimatedDurationMinutes(),
+            request.status()
+        );
+        ctx.json(mapper.route(route));
     }
 }
