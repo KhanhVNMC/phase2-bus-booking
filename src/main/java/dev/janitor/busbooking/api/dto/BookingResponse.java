@@ -17,5 +17,6 @@ public record BookingResponse(
 	String bookedAt, // null unless CONFIRMED/CANCELLED after paying
 	// ours, not in the phase 1 contract
 	List<String> seats, // ASSIGNED_SEATING: seat names, empty otherwise
-	String paymentStartTime
+	String paymentStartTime,
+    String paymentUrl // chi xuat hien o POST /api/bookings de dan nguoi dung den trang thanh toan
 ) {}
