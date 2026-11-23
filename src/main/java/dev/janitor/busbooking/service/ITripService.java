@@ -15,6 +15,8 @@ public interface ITripService {
 	// null filters are ignored, the departure window is [from, to)
 	List<TripPublicView> searchPublic(Long originId, Long destinationId, Long departureFrom, Long departureTo);
 
+    List<TripPublicView> getPublicMany(List<Long> tripIds);
+
 	// admin side, always the db
 	Trip get(long tripId);
 
