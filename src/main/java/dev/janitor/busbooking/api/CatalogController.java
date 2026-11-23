@@ -33,7 +33,7 @@ public class CatalogController {
     private final ILocationService locationService;
     private final IVehicleService vehicleService;
     private final IOperatorService operatorService;
-    private final IRouteService routeService; // TODO
+    private final IRouteService routeService;
     private final ResponseMapper mapper;
 
     public CatalogController(
@@ -55,6 +55,12 @@ public class CatalogController {
         router.get("/api/admin/vehicles", this::listVehicles);
         router.post("/api/admin/vehicles", this::createVehicle);
         router.put("/api/admin/vehicles/{vehicleId}", this::updateVehicle);
+        router.get("/api/admin/operators", this::listOperators);
+        router.post("/api/admin/operators", this::createOperator);
+        router.put("/api/admin/operators/{operatorId}", this::updateOperator);
+        router.get("/api/admin/routes", this::listRoutes);
+        router.post("/api/admin/routes", this::createRoute);
+        router.put("/api/admin/routes/{routeId}", this::updateRoute);
     }
 
     // PUBLIC. The search box on the booking page
@@ -109,10 +115,8 @@ public class CatalogController {
         CreateVehicleRequest request = APIUtils.body(ctx, CreateVehicleRequest.class);
         Vehicle vehicle = vehicleService.create(
             APIUtils.parseId(request.operatorId(), "operatorId"),
-            request.licensePlate(),
-            request.vehicleType(),
-            request.seatCapacity(),
-            request.seatLabels()
+            request.licensePlate(), request.vehicleType(),
+            request.seatCapacity(), request.seatLabels()
         );
         ctx.status(HttpStatus.CREATED);
         ctx.json(mapper.vehicle(vehicle));
@@ -126,10 +130,8 @@ public class CatalogController {
         Vehicle vehicle = vehicleService.update(
             vehicleId,
             APIUtils.parseId(request.operatorId(), "operatorId"),
-            request.licensePlate(),
-            request.vehicleType(),
-            request.seatCapacity(),
-            request.seatLabels(),
+            request.licensePlate(), request.vehicleType(),
+            request.seatCapacity(), request.seatLabels(),
             request.status()
         );
         ctx.json(mapper.vehicle(vehicle));
