@@ -2,9 +2,11 @@ package dev.janitor.busbooking.utils;
 
 import java.text.Normalizer;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.Locale;
 import java.util.regex.Pattern;
 
@@ -125,4 +127,26 @@ public class Sputnik {
 		}
 		return value;
 	}
-}
+
+    public static Long parseTime(String value, String fieldName) {
+        if (value == null || value.isBlank()) return null;
+        try {
+            return LocalDateTime.parse(value.trim(), DATE_TIME).atZone(VIETNAM).toInstant().toEpochMilli();
+        } catch (DateTimeParseException e) {
+            throw ServiceException.invalid(fieldName + " must look like 2026-12-31T08:30:00");
+        }
+    }
+
+    public static long[] dayWindow(String date, String fieldName) {
+        if (date == null || date.isBlank()) {
+            return null;
+        }
+        long dayStart;
+        try {
+            dayStart = LocalDate.parse(date.trim()).atStartOfDay(VIETNAM).toInstant().toEpochMilli();
+        } catch (DateTimeParseException e) {
+            throw ServiceException.invalid(fieldName + " must look like 2026-12-31");
+        }
+        return new long[] { dayStart, dayStart + (24L * 60L * 60L * 1000L) };
+    }
+} 
