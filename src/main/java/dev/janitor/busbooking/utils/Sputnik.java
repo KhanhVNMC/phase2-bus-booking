@@ -1,6 +1,10 @@
 package dev.janitor.busbooking.utils;
 
 import java.text.Normalizer;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 import java.util.regex.Pattern;
 
@@ -97,6 +101,19 @@ public class Sputnik {
 			throw ServiceException.invalid(fieldName + " is not a valid vietnamese phone number");
 		}
 		return phone;
+	}
+	
+	public static final ZoneId VIETNAM = ZoneId.of("Asia/Ho_Chi_Minh");
+	private static final DateTimeFormatter DATE_TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
+	public static String timeFmtLocal(long epochMs) {
+		if (epochMs == 0) {
+			return null;
+		}
+		return LocalDateTime.ofInstant(Instant.ofEpochMilli(epochMs), VIETNAM).format(DATE_TIME);
+	}
+	
+	public static String i64ToString(long value) {
+		return String.valueOf(value);
 	}
 	
 	public static int requireRange(Integer value, String fieldName, int min, int max) {

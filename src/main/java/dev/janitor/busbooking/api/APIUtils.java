@@ -59,9 +59,27 @@ public class APIUtils {
         return parsed;
     }
 
-    public static String longToStr(long value) {
-       return String.valueOf(value);
-    }
-
+	public static Long parseOptionalId(String value, String fieldName) {
+		if (value == null || value.isBlank()) {
+			return null;
+		}
+		return parseId(value, fieldName);
+	}
+	
+	public static Long queryId(Context ctx, String name) {
+		return parseOptionalId(ctx.queryParam(name), name);
+	}
+	
+	public static <E extends Enum<E>> E queryEnum(Context ctx, String name, Class<E> enumClass) {
+		String value = ctx.queryParam(name);
+		if (value == null || value.isBlank()) {
+			return null;
+		}
+		try {
+			return Enum.valueOf(enumClass, value.trim());
+		} catch (IllegalArgumentException e) {
+			throw ServiceException.invalid(name + " is not a valid " + enumClass.getSimpleName());
+		}
+	}
 }
 
