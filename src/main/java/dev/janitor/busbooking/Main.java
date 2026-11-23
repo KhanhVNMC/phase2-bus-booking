@@ -31,6 +31,13 @@ import dev.janitor.busbooking.impl.service.VehicleService;
 import dev.janitor.busbooking.repository.IBookingRepository;
 import dev.janitor.busbooking.repository.ITripPublicViewRepository;
 import dev.janitor.busbooking.repository.ITripRepository;
+import dev.janitor.busbooking.api.AuthController;
+import dev.janitor.busbooking.api.AuthenticationMiddleware;
+import dev.janitor.busbooking.api.BookingController;
+import dev.janitor.busbooking.api.BusBookingAPI;
+import dev.janitor.busbooking.api.CatalogController;
+import dev.janitor.busbooking.api.ResponseMapper;
+import dev.janitor.busbooking.api.TripController;
 import dev.janitor.busbooking.bootstrap.ApplicationConfig;
 import dev.janitor.busbooking.bootstrap.HibernateRuntime;
 import dev.janitor.busbooking.bootstrap.RedisRuntime;
@@ -114,7 +121,22 @@ public class Main {
 			if (superAdminCreated) {
 				System.out.println("[system] Created the first SUPER_ADMIN: " + config.getBootstrapSuperAdminEmail());
 			}
-			// TODO: wait for the dumbasses to bring the systems together first
+			var mapper = new ResponseMapper(locationService, operatorService, tripService);
+			// i give up, do it yourself
+			BusBookingAPI api = new BusBookingAPI(
+				new AuthenticationMiddleware(authService),
+				new AuthController(authService, userService),
+				new TripController(tripService),
+				new BookingController(bookingService, mapper),
+				new CatalogController(locationService, operatorService, routeService, vehicleService, mapper)
+			);
+			Javalin application = api.start(config.getServerHost(), config.getServerPort());
+			try {
+				registerShutdownHook(application, cacheInvalidation, redis, hibernate);
+			} catch (RuntimeException e) {
+				application.stop();
+				throw e;
+			}
 			System.out.println("[system] Ready! Subsystem and services started in " + (System.currentTimeMillis() - time) + "ms");
 		} catch (Exception e) {
 			if (redis != null) { redis.close(); }
