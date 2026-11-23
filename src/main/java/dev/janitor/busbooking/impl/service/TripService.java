@@ -65,6 +65,11 @@ public class TripService implements ITripService {
 		return tripViewRepo.getMany(tripIds);
 	}
 
+    @Override
+    public List<TripPublicView> getPublicMany(List<Long> tripIds) {
+        return tripViewRepo.getMany(tripIds);
+    }
+
 	@Override
 	public Trip get(long tripId) {
 		var trip = tripRepo.get(tripId);
