@@ -58,4 +58,10 @@ public class APIUtils {
         }
         return parsed;
     }
+
+    public static String longToStr(long value) {
+       return String.valueOf(value);
+    }
+
 }
+

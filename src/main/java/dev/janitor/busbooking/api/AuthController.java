@@ -2,8 +2,11 @@ package dev.janitor.busbooking.api;
 
 import dev.janitor.busbooking.api.dto.LoginRequest;
 import dev.janitor.busbooking.api.dto.LoginResponse;
+import dev.janitor.busbooking.api.dto.MessageResponse;
 import dev.janitor.busbooking.api.dto.RegisterRequest;
+import dev.janitor.busbooking.api.dto.ResendVerificationRequest;
 import dev.janitor.busbooking.api.dto.UpdateProfileRequest;
+import dev.janitor.busbooking.api.dto.VerifyEmailRequest;
 import dev.janitor.busbooking.api.dto.ChangeRoleRequest;
 import dev.janitor.busbooking.service.IAuthService;
 import dev.janitor.busbooking.service.IAuthService.LoginResult;
@@ -30,6 +33,9 @@ public class AuthController {
         router.get("/api/users/me", this::me);
         router.put("/api/users/me", this::updateMe);
         router.put("/api/admin/users/{userId}/role", this::changeRole);
+        // Email    
+        router.post("/api/auth/verify-email", this::verifyEmail);
+		router.post("/api/auth/resend-verification", this::resendVerification);
     }
 
     public void register(Context ctx) {
@@ -55,7 +61,9 @@ public class AuthController {
     public void updateMe(Context ctx) {
         Principal principal = APIUtils.principal(ctx);
         UpdateProfileRequest request = APIUtils.body(ctx, UpdateProfileRequest.class);
-        ctx.json(ResponseMapper.user(userService.updateProfile(principal.userId(), request.fullName(), request.phone())));
+        ctx.json(ResponseMapper.user(userService.updateProfile(
+            principal.userId(), request.fullName(), request.phone()
+        )));
     }
 
     /* cai token chi de dua qua buoc dau, buoc sau van check db binh thuong */
@@ -64,5 +72,18 @@ public class AuthController {
         long targetUserId = APIUtils.pathId(ctx, "userId");
         ChangeRoleRequest request = APIUtils.body(ctx, ChangeRoleRequest.class);
         ctx.json(ResponseMapper.user(userService.changeRole(principal.userId(), targetUserId, request.role())));
+    }
+
+    public void resendVerification(Context ctx) {
+        ResendVerificationRequest request = APIUtils.body(ctx, ResendVerificationRequest.class);
+        authService.resendVerification(request.email());
+        ctx.status(HttpStatus.ACCEPTED);    
+        ctx.json(new MessageResponse("%PLACEHOLDER%")); // TODO
+    }
+
+    public void verifyEmail(Context ctx) {
+        VerifyEmailRequest request = APIUtils.body(ctx, VerifyEmailRequest.class);
+        authService.verifyEmail(request.email(), request.code());
+        ctx.status(HttpStatus.NO_CONTENT);
     }
 }
