@@ -17,7 +17,6 @@ import dev.janitor.busbooking.model.SeatSet;
 import dev.janitor.busbooking.model.Trip;
 import dev.janitor.busbooking.model.User;
 import dev.janitor.busbooking.repository.IBookingRepository;
-import dev.janitor.busbooking.repository.IPaymentProcessor;
 import dev.janitor.busbooking.repository.IPaymentTokenStore;
 import dev.janitor.busbooking.repository.IRefundRepository;
 import dev.janitor.busbooking.repository.ITripRepository;
@@ -33,20 +32,19 @@ import dev.janitor.busbooking.utils.Sputnik;
 public class BookingService implements IBookingService {
 	private static final int MAX_PASSENGER_NAME_LENGTH = 100;
 	private static final long NO_REFUND = 0; // release() only reads the refund id for CONFIRMED -> CANCELLED
-
+	
 	private final IBookingRepository bookingRepo;
 	private final ITripRepository tripRepo;
 	private final IUserRepository userRepo;
 	private final IRefundRepository refundRepo;
 	private final IPaymentTokenStore paymentTokens;
-	private final IPaymentProcessor paymentProcessor;
 	private final int maxSeatsPerBooking;
 	private final long paymentExpiryMs;
 	private final int holdSweepBatchSize;
-
+	
 	public BookingService(
 		IBookingRepository bookingRepo, ITripRepository tripRepo, IUserRepository userRepo,
-		IRefundRepository refundRepo, IPaymentTokenStore paymentTokens, IPaymentProcessor paymentProcessor,
+		IRefundRepository refundRepo, IPaymentTokenStore paymentTokens,
 		ApplicationConfig config
 	) {
 		this.bookingRepo = bookingRepo;
@@ -54,30 +52,25 @@ public class BookingService implements IBookingService {
 		this.userRepo = userRepo;
 		this.refundRepo = refundRepo;
 		this.paymentTokens = paymentTokens;
-		this.paymentProcessor = paymentProcessor;
 		this.maxSeatsPerBooking = config.getMaxSeatsPerBooking();
 		this.paymentExpiryMs = config.getPaymentHoldTtlSeconds() * 1000L;
 		this.holdSweepBatchSize = config.getHoldSweepBatchSize();
 	}
-
+	
 	@Override
 	public PaymentHold hold(long userId, long tripId, String passengerName, String passengerPhone, Integer quantity, List<String> seats) {
-		Booking booking = this.reserveHold(userId, tripId, passengerName, passengerPhone, quantity, seats);
+		Booking booking = this.reserveHold(userId, tripId, passengerName, passengerPhone, quantity, seats, false);
 		String paymentToken = UUID.randomUUID().toString();
 		// the token dies with the hold, a pay page opened after that is just a dead link
 		paymentTokens.put(paymentToken, booking.id(), this.paymentExpiryMs);
 		return new PaymentHold(booking, paymentToken);
 	}
-
+	
 	@Override
-	public Booking holdAndPay(long userId, long tripId, String passengerName, String passengerPhone, Integer quantity, List<String> seats) {
-		Booking held = this.reserveHold(userId, tripId, passengerName, passengerPhone, quantity, seats);
-		PaymentOutcome outcome = paymentProcessor.charge(held.id(), held.totalAmount());
-		Booking settled = this.settlePayment(held.id(), outcome);
-		if (settled.status() != BookingStatus.CONFIRMED) {
-			throw ServiceException.conflict("Payment " + outcome + ", the seats were released");
-		}
-		return settled;
+	public Booking bookLegacy(long userId, long tripId, String passengerName, String passengerPhone, Integer quantity, List<String> seats) {
+		// basically, its phase 1, the fucking thing is born as CONFIRMED, no payment needed
+		// unrealistic? ABSOLUTELY, fast to compared to phase 1? probably
+		return this.reserveHold(userId, tripId, passengerName, passengerPhone, quantity, seats, true);
 	}
 	
 	@Override
@@ -170,7 +163,7 @@ public class BookingService implements IBookingService {
 		}
 		return this.requireBooking(bookingId);
 	}
-
+	
 	@Override
 	public int sweepExpiredHolds() {
 		long now = System.currentTimeMillis();
@@ -185,8 +178,10 @@ public class BookingService implements IBookingService {
 	}
 	
 	// reserve but not paid yet; all fate on the payment processor
+	// legacyOneShot is basically phase 1; no hold and no payment at all, fuck it we ball
 	private Booking reserveHold(
-		long userId, long tripId, String passengerName, String passengerPhone, Integer quantity, List<String> seats
+		long userId, long tripId, String passengerName, String passengerPhone, Integer quantity, List<String> seats,
+		boolean legacyOneShot
 	) {
 		User user = this.requireUser(userId);
 		// no name/phone = booking for yourself
@@ -226,9 +221,10 @@ public class BookingService implements IBookingService {
 			trip.price(),
 			desiredSeats,desiredOpenSeats,
 			trip.price() * seatCount,
-			BookingStatus.PAYMENT_HOLDING,
+			legacyOneShot ? BookingStatus.CONFIRMED : BookingStatus.PAYMENT_HOLDING, // one shot borns confirmed (???)
 			now, 
-			0, 0 // not booked and not invalidated yet
+			legacyOneShot ? now : 0, // a hold is not booked yet
+			0 // not invalidated yet
 		);
 		ReserveResult result = bookingRepo.reserve(booking, trip.seatsType());
 		if (result == ReserveResult.ALREADY_HOLDING) {

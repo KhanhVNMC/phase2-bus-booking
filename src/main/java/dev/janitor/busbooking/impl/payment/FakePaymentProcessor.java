@@ -7,6 +7,7 @@ import dev.janitor.busbooking.consts.PaymentOutcome;
 import dev.janitor.busbooking.repository.IPaymentProcessor;
 
 // a sham: waits a bit, then mostly says yes. benchmark mode always says yes, right away
+@Deprecated
 public class FakePaymentProcessor implements IPaymentProcessor {
 	private final boolean benchmarkMode;
 	private final int minDelayMs;

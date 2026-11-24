@@ -29,14 +29,14 @@ import io.javalin.http.HttpStatus;
 import io.javalin.router.JavalinDefaultRoutingApi;
 
 // the admin catalog + the one public list (locations)
-public class CatalogController {
+public class AdminResourceController {
     private final ILocationService locationService;
     private final IVehicleService vehicleService;
     private final IOperatorService operatorService;
     private final IRouteService routeService;
     private final ResponseMapper mapper;
 
-    public CatalogController(
+    public AdminResourceController(
         ILocationService locationService, IOperatorService operatorService, IRouteService routeService,
         IVehicleService vehicleService, ResponseMapper mapper
     ) {

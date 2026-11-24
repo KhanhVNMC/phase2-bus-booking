@@ -15,8 +15,8 @@ public interface IBookingService {
 	// passengerName / passengerPhone null = the account holder's
 	PaymentHold hold(long userId, long tripId, String passengerName, String passengerPhone, Integer quantity, List<String> seats);
 
-	// the phase 1 one-shot (?facade): hold, charge right here, confirm. a failed charge abandons the hold and throws
-	Booking holdAndPay(long userId, long tripId, String passengerName, String passengerPhone, Integer quantity, List<String> seats);
+	// the phase 1 one-shot (?legacy): claims the seats as CONFIRMED right away, no hold, no payment
+	Booking bookLegacy(long userId, long tripId, String passengerName, String passengerPhone, Integer quantity, List<String> seats);
 
 	// for the gateway pay page: the booking behind a live token, still waiting for payment
 	Booking getForPayment(String paymentToken);

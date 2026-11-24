@@ -35,7 +35,7 @@ import dev.janitor.busbooking.api.AuthController;
 import dev.janitor.busbooking.api.AuthenticationMiddleware;
 import dev.janitor.busbooking.api.BookingController;
 import dev.janitor.busbooking.api.BusBookingAPI;
-import dev.janitor.busbooking.api.CatalogController;
+import dev.janitor.busbooking.api.AdminResourceController;
 import dev.janitor.busbooking.api.ResponseMapper;
 import dev.janitor.busbooking.api.TripController;
 import dev.janitor.busbooking.bootstrap.ApplicationConfig;
@@ -102,7 +102,7 @@ public class Main {
 			var vehicleService = new VehicleService(vehicleRepo, operatorRepo);
 			var tripService = new TripService(tripRepo, tripViewRepo, routeRepo, vehicleRepo, config);
 			var bookingService = new BookingService(
-				bookingRepo, tripRepo, userRepo, refundRepo, new RedisPaymentTokenStore(), new FakePaymentProcessor(config), config
+				bookingRepo, tripRepo, userRepo, refundRepo, new RedisPaymentTokenStore(), config
 			);
 			var authService = new AuthService(
 				userRepo,
@@ -128,7 +128,7 @@ public class Main {
 				new AuthController(authService, userService),
 				new TripController(tripService),
 				new BookingController(bookingService, mapper),
-				new CatalogController(locationService, operatorService, routeService, vehicleService, mapper)
+				new AdminResourceController(locationService, operatorService, routeService, vehicleService, mapper)
 			);
 			Javalin application = api.start(config.getServerHost(), config.getServerPort());
 			try {

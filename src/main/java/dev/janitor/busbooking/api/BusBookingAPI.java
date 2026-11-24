@@ -1,5 +1,7 @@
 package dev.janitor.busbooking.api;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.LocalDateTime;
 
 import dev.janitor.busbooking.api.dto.ErrorResponse;
@@ -10,18 +12,19 @@ import io.javalin.Javalin;
 import io.javalin.config.JavalinConfig;
 import io.javalin.http.Context;
 import io.javalin.http.HttpStatus;
+import io.javalin.http.staticfiles.Location;
 
 // PRESENTATION LAYER entry point
 public class BusBookingAPI {
     private final AuthenticationMiddleware authentication;
     private final AuthController authController;
-    private final CatalogController catalogController;
+    private final AdminResourceController catalogController;
     private final TripController tripController;
     private final BookingController bookingController;
 
     public BusBookingAPI(
         AuthenticationMiddleware authentication, AuthController authController,
-        TripController tripController, BookingController bookingController, CatalogController catalogController
+        TripController tripController, BookingController bookingController, AdminResourceController catalogController
     ) {
         this.authentication = authentication;
         this.authController = authController;
@@ -32,6 +35,10 @@ public class BusBookingAPI {
 
     public void registerRoutes(JavalinConfig config) {
         config.concurrency.useVirtualThreads = true; // java 24+
+		// test shit
+		if (Files.isDirectory(Path.of("playground"))) {
+			config.staticFiles.add("playground", Location.EXTERNAL);
+		}
         config.routes.before("/api/*", this.authentication.handler());
         config.routes.get("/api/health", this::handleHealth);
         config.routes.exception(Exception.class, (e, ctx) -> {

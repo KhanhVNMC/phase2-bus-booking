@@ -31,15 +31,15 @@ public class BookingController {
 	}
 	
 	// by default it is a hold + the gateway link
-	// to get the old phase 1 behaviour, add ?facade either ret CONFIRMED or 409
+	// to get the old phase 1 behaviour, add ?legacy either ret CONFIRMED or 409
 	public void create(Context ctx) {
 		Principal principal = APIUtils.principal(ctx);
 		BookingRequest request = APIUtils.body(ctx, BookingRequest.class);
 		long tripId = APIUtils.parseId(request.tripId(), "tripId");
 		ctx.status(HttpStatus.CREATED);
-		// pay immediately, infinite money hack
-		if (ctx.queryParam("facade") != null) {
-			Booking booking = this.bookingService.holdAndPay(
+		// no hold, no payment, from mouth straight to asshole, infinite money hack
+		if (ctx.queryParam("legacy") != null) {
+			Booking booking = this.bookingService.bookLegacy(
 				principal.userId(), tripId, request.passengerName(), request.passengerPhone(), request.quantity(), request.seats()
 			);
 			ctx.json(this.mapper.booking(booking, null));
