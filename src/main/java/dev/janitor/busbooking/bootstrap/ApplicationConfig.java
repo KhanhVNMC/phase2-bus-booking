@@ -32,7 +32,7 @@ public class ApplicationConfig {
 	private boolean verboseMode = envBoolean("VERBOSE_MODE", false);
 	private String serverHost = env("SERVER_HOST", "0.0.0.0");
 	private int serverPort = envInt("SERVER_PORT", 8080);
-	private int instanceId = envInt("INSTANCE_ID", -1); // required, no default
+	private int instanceId = envInt("INSTANCE_ID", 1); // required, no default
 
 	// POSTGRES
 	private String databaseName = env("DATABASE_NAME", "busbooking");

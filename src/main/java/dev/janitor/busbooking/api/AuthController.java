@@ -33,9 +33,9 @@ public class AuthController {
         router.get("/api/users/me", this::me);
         router.put("/api/users/me", this::updateMe);
         router.put("/api/admin/users/{userId}/role", this::changeRole);
-        // Email    
+        // Email
+        router.post("/api/auth/resend-verification", this::resendVerification);
         router.post("/api/auth/verify-email", this::verifyEmail);
-		router.post("/api/auth/resend-verification", this::resendVerification);
     }
 
     public void register(Context ctx) {
@@ -77,8 +77,8 @@ public class AuthController {
     public void resendVerification(Context ctx) {
         ResendVerificationRequest request = APIUtils.body(ctx, ResendVerificationRequest.class);
         authService.resendVerification(request.email());
-        ctx.status(HttpStatus.ACCEPTED);    
-        ctx.json(new MessageResponse("%PLACEHOLDER%")); // TODO
+        ctx.status(HttpStatus.ACCEPTED);
+        ctx.json(new MessageResponse("Resent verification email."));
     }
 
     public void verifyEmail(Context ctx) {
